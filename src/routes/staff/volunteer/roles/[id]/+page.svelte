@@ -10,7 +10,7 @@
 	import Table from '$lib/components/shared/Table.svelte';
 	import DataList from '$lib/components/shared/DataList.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
-	import MemberLink from '$lib/components/shared/MemberLink.svelte';
+	import { EntityIdentity } from '$lib/components/shared/entity';
 	import Button from '$lib/components/shared/Button.svelte';
 	import Action from '$lib/components/shared/Action.svelte';
 	import Form from '$lib/components/shared/Form/Form.svelte';
@@ -445,16 +445,7 @@
 									</td>
 								{/if}
 								<td class="cell-primary whitespace-nowrap">
-									<MemberLink
-										variant="inline"
-										member={{
-											name: member.name,
-											email: member.email,
-											pronouns: member.pronouns,
-											role: member.role,
-											userId: member.userId
-										}}
-									/>
+									<EntityIdentity ref={member.member} />
 									{#if gated && member.missing.length > 0}
 										<div class="text-xs text-warning">
 											needs {member.missing.map((c) => c.name).join(', ')}

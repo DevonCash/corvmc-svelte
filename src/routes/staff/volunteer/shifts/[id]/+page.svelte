@@ -4,7 +4,7 @@
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import InfoCard from '$lib/components/shared/InfoCard.svelte';
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
-	import MemberLink from '$lib/components/shared/MemberLink.svelte';
+	import { EntityIdentity } from '$lib/components/shared/entity';
 	import Action from '$lib/components/shared/Action.svelte';
 	import DefinitionList from '$lib/components/shared/DefinitionList/DefinitionList.svelte';
 	import Fact from '$lib/components/shared/DefinitionList/Fact.svelte';
@@ -97,16 +97,7 @@
 					{#each claimants as claimant (claimant.signupId)}
 						<li class="flex flex-wrap items-center justify-between gap-3">
 							<div class="flex min-w-0 items-center gap-2">
-								<MemberLink
-									variant="inline"
-									member={{
-										name: claimant.name,
-										email: claimant.email,
-										pronouns: claimant.pronouns,
-										role: claimant.role,
-										userId: claimant.userId
-									}}
-								/>
+								<EntityIdentity ref={claimant.member} />
 								<span class="badge badge-sm {statusBadge[claimant.status]}">
 									{claimant.status.replace('_', ' ')}
 								</span>
@@ -122,7 +113,7 @@
 										variant="ghost"
 										size="sm"
 										class="text-success"
-										modalTitle="Confirm {claimant.name}?"
+										modalTitle="Confirm {claimant.member.title}?"
 										submitLabel="Confirm"
 										successToast="Confirmed"
 									>
@@ -146,7 +137,7 @@
 										variant="ghost"
 										size="sm"
 										class="text-error"
-										modalTitle="Mark {claimant.name} as a no-show?"
+										modalTitle="Mark {claimant.member.title} as a no-show?"
 										submitLabel="No-show"
 										submitVariant="error"
 										successToast="Marked as no-show"
