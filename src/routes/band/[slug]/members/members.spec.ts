@@ -34,7 +34,14 @@ const bandServiceMock = {
 	})),
 	removeMember: vi.fn(async () => ({ rowCount: 1 })),
 	revokeInvitation: vi.fn(async () => ({ rowCount: 1 })),
-	updateMember: vi.fn(async () => undefined),
+	updateMember: vi.fn(
+		async (
+			_memberId: string,
+			_data: { role?: string; position?: string | null },
+			_bandId?: string
+		) => undefined
+	),
+	updateOwnMembership: vi.fn(async () => undefined),
 	transferOwnership: vi.fn(async () => undefined),
 	leaveBand: vi.fn(async () => ({ rowCount: 1 })),
 	// `mapDomainError` builds its `instanceof` ladder from this module's exports.
@@ -106,6 +113,7 @@ const {
 	updateMemberRemote,
 	transferOwner,
 	leave,
+	updateMyBandMembership,
 	searchBandUsers: searchUsers
 } = (await import('$lib/remote/bands.remote')) as any;
 
@@ -249,5 +257,81 @@ describe('searchUsers', () => {
 
 		expect(bandServiceMock.searchMembers).not.toHaveBeenCalled();
 		expect(results).toHaveLength(0);
+	});
+});
+
+// ---------------------------------------------------------------------------
+// Self-service membership
+//
+// `position` had been settable only at invite time since bands shipped, and
+// `alias` is new. Both belong to the person they describe, so they get their
+// own remote rather than an arm of the admin one.
+// ---------------------------------------------------------------------------
+
+describe('updateMyBandMembership', () => {
+	beforeEach(() => {
+		bandServiceMock.getUserRole.mockResolvedValue('member');
+	});
+
+	it("writes the caller's own row, resolved from the guard", async () => {
+		await updateMyBandMembership({ alias: 'Ziggy', position: 'Bass' });
+
+		expect(bandServiceMock.updateOwnMembership).toHaveBeenCalledWith('band-1', 'user-owner', {
+			alias: 'Ziggy',
+			position: 'Bass'
+		});
+	});
+
+	// The schema has no memberId at all — the row comes from (band.id, user.id),
+	// which is unique. Keying a mutation on a caller-supplied id when the guard
+	// already knows the row is how one member ends up editing another.
+	it('ignores any submitted member id', async () => {
+		await updateMyBandMembership({ alias: 'Ziggy', memberId: 'member-someone-else' });
+
+		expect(bandServiceMock.updateOwnMembership).toHaveBeenCalledWith(
+			'band-1',
+			'user-owner',
+			expect.objectContaining({ alias: 'Ziggy' })
+		);
+		expect(bandServiceMock.updateMember).not.toHaveBeenCalled();
+	});
+
+	// `updateMember` throws CannotRemoveOwnerError on any owner row — that guard
+	// exists to stop an admin demoting the owner, and routing self-service
+	// through it would lock the owner out of their own stage name.
+	it('lets an owner set their own alias', async () => {
+		bandServiceMock.getUserRole.mockResolvedValue('owner');
+
+		await expect(updateMyBandMembership({ alias: 'Ziggy' })).resolves.toEqual({ success: true });
+		expect(bandServiceMock.updateOwnMembership).toHaveBeenCalled();
+	});
+
+	it('clears the alias when submitted empty, rather than skipping it', async () => {
+		await updateMyBandMembership({ alias: '', position: '' });
+
+		expect(bandServiceMock.updateOwnMembership).toHaveBeenCalledWith('band-1', 'user-owner', {
+			alias: null,
+			position: null
+		});
+	});
+
+	it('refuses a non-member', async () => {
+		bandServiceMock.getUserRole.mockResolvedValue(null);
+
+		await expect(updateMyBandMembership({ alias: 'Ziggy' })).rejects.toMatchObject({ status: 403 });
+	});
+});
+
+describe('updateMemberRemote', () => {
+	// An admin can say what you play; they cannot rename you. `alias` is absent
+	// from this schema, so a submitted one is dropped rather than written.
+	it('never writes an alias, even if one is submitted', async () => {
+		bandServiceMock.getUserRole.mockResolvedValue('admin');
+
+		await updateMemberRemote({ memberId: 'member-2', position: 'Drums', alias: 'Not Yours' });
+
+		const written = bandServiceMock.updateMember.mock.calls[0]![1];
+		expect(written).not.toHaveProperty('alias');
+		expect(written.position).toBe('Drums');
 	});
 });

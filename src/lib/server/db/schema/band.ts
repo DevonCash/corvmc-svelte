@@ -177,7 +177,18 @@ export const bandMember = sqliteTable(
 			.notNull()
 			.references(() => user.id, { onDelete: 'cascade' }),
 		role: text('role', { enum: bandRoles }).notNull(),
+		/** Instrument or job in this band — "Bass", "Vocals". The band's word for the role. */
 		position: text('position'),
+		/**
+		 * A per-band stage name. Distinct from `user.name`, which is one identity
+		 * across the whole platform, and from `event_band.name`, which is an act on
+		 * a bill rather than a person. Null means "use the account name" — the
+		 * roster falls back rather than storing a copy that goes stale the moment
+		 * someone renames their account.
+		 *
+		 * Self-set only. An admin can say what you play; they cannot rename you.
+		 */
+		alias: text('alias'),
 		status: text('status', { enum: bandMemberStatuses }).notNull(),
 		invitedById: text('invited_by_id').references(() => user.id, { onDelete: 'set null' }),
 		createdAt: integer('created_at', { mode: 'timestamp' })

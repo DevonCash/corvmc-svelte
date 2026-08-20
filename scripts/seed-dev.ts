@@ -250,6 +250,22 @@ const BAND_POSITIONS = [
 	'Trumpet'
 ];
 
+// Per-band stage names. Only some members have one — the roster, the microsite
+// members block and the directory profile all fall back to the account name,
+// and that fallback is the path most rows take, so it needs local coverage too.
+const BAND_ALIASES = [
+	'Ziggy',
+	'Slim',
+	'Doc',
+	'Ace',
+	'Kid Vicious',
+	'The Reverend',
+	'Lefty',
+	'Sparrow',
+	'Nova',
+	'Tex'
+];
+
 const TICKET_CODES_PREFIX = 'TIX';
 
 const INSTRUMENTS = [
@@ -1300,6 +1316,7 @@ async function seedBands(users: SeedUser[]) {
 				userId: m.id,
 				role: 'member',
 				position: pick(BAND_POSITIONS),
+				alias: Math.random() > 0.66 ? pick(BAND_ALIASES) : null,
 				status: Math.random() > 0.15 ? 'active' : 'pending',
 				invitedById: owner.id
 			});

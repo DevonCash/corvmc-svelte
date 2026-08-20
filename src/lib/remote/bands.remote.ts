@@ -15,6 +15,7 @@ import {
 	getMembers,
 	update,
 	updateMember,
+	updateOwnMembership,
 	create,
 	acceptInvitation,
 	declineInvitation,
@@ -158,9 +159,14 @@ export const getBandMembersList = query(z.string(), async (bandId) => {
 	const { band } = await requireBandMember();
 	if (band.id !== bandId) error(403, 'Not authorized');
 	const members = await getMembers(bandId);
+	// `getMembers` selects the raw storage key; the roster needs a URL.
+	const withAvatar = members.map((m) => ({
+		...m,
+		userImage: resolveImageUrl(m.userImage) ?? undefined
+	}));
 	return {
-		active: members.filter((m) => m.status === 'active'),
-		pending: members.filter((m) => m.status === 'pending')
+		active: withAvatar.filter((m) => m.status === 'active'),
+		pending: withAvatar.filter((m) => m.status === 'pending')
 	};
 });
 
@@ -485,6 +491,14 @@ export const revokeInvitation = form(
 	}
 );
 
+/**
+ * An admin editing somebody else's row: their role in the band, and the band's
+ * word for what they do.
+ *
+ * Deliberately no `alias`. A stage name is self-identification — an admin can
+ * say you play bass, but cannot rename you. That path is
+ * `updateMyBandMembership` below, and it is scoped to the caller's own row.
+ */
 export const updateMemberRemote = form(
 	z.object({
 		memberId: z.string().min(1),
@@ -501,6 +515,37 @@ export const updateMemberRemote = form(
 			},
 			band.id
 		);
+		return { success: true };
+	}
+);
+
+/**
+ * A member editing their own membership: their stage name and what they play.
+ *
+ * `position` has been settable only at invite time since bands shipped, and
+ * `alias` is new — so this is the only way either can be changed by the person
+ * they describe.
+ *
+ * There is no `memberId` in the schema on purpose. The row comes from the
+ * guard's `(band.id, user.id)`, which is unique; keying a mutation on a
+ * caller-supplied id when the guard already knows the row is how one member
+ * ends up editing another.
+ */
+export const updateMyBandMembership = form(
+	z.object({
+		alias: z.string().trim().max(100).optional(),
+		position: z.string().trim().max(100).optional()
+	}),
+	async (data) => {
+		const { user, band } = await requireBandMember();
+		try {
+			await updateOwnMembership(band.id, user.id, {
+				alias: data.alias !== undefined ? data.alias || null : undefined,
+				position: data.position !== undefined ? data.position || null : undefined
+			});
+		} catch (err) {
+			mapDomainError(err);
+		}
 		return { success: true };
 	}
 );

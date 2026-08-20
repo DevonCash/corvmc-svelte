@@ -235,11 +235,15 @@ export async function getMembers(bandId: string) {
 			userId: bandMember.userId,
 			role: bandMember.role,
 			position: bandMember.position,
+			alias: bandMember.alias,
 			status: bandMember.status,
 			invitedById: bandMember.invitedById,
 			createdAt: bandMember.createdAt,
 			userName: user.name,
 			userEmail: user.email,
+			// Without this every roster in the app renders MemberLink with no
+			// avatar, or hand-rolls a placeholder circle beside it.
+			userImage: user.image,
 			userPronouns: user.pronouns,
 			userRole: primaryRoleFor(user.id)
 		})
@@ -502,6 +506,44 @@ export async function updateMember(memberId: string, data: UpdateMemberData, ban
 	if (data.position !== undefined) updates.position = data.position;
 
 	return db.update(bandMember).set(updates).where(scope);
+}
+
+export interface UpdateOwnMembershipData {
+	alias?: string | null;
+	position?: string | null;
+}
+
+/**
+ * A member editing their own row.
+ *
+ * Deliberately not `updateMember`: that one refuses any row whose role is
+ * 'owner', which is what stops an admin demoting the owner — but it would also
+ * lock an owner out of their own stage name. Role is not settable here at all,
+ * so that protection has nothing to protect.
+ *
+ * Scoped by `(bandId, userId)`, which is unique, and to an active membership:
+ * a pending invitee has not joined yet and has nothing to name.
+ */
+export async function updateOwnMembership(
+	bandId: string,
+	userId: string,
+	data: UpdateOwnMembershipData
+) {
+	const updates: Record<string, unknown> = {};
+	if (data.alias !== undefined) updates.alias = data.alias;
+	if (data.position !== undefined) updates.position = data.position;
+	if (Object.keys(updates).length === 0) return;
+
+	return db
+		.update(bandMember)
+		.set(updates)
+		.where(
+			and(
+				eq(bandMember.bandId, bandId),
+				eq(bandMember.userId, userId),
+				eq(bandMember.status, 'active')
+			)
+		);
 }
 
 export async function transferOwnership(bandId: string, newOwnerId: string, actorId: string) {
