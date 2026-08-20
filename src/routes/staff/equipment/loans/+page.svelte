@@ -7,7 +7,7 @@
 	import FilterBar from '$lib/components/shared/FilterBar.svelte';
 	import Select from '$lib/components/shared/Form/Select.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
-	import { EntityChip } from '$lib/components/shared/entity';
+	import { EntityChip, EntityIdentity } from '$lib/components/shared/entity';
 	import Badge from '$lib/components/shared/Badge.svelte';
 	import { rowLink } from '$lib/actions/row-link';
 	import { resolve } from '$app/paths';
@@ -97,11 +97,7 @@
 						</td>
 						<!-- Equipment is what was borrowed; the borrower is a record of its
 						     own, so it gets a column rather than riding this cell's subline. -->
-						<td class="cell-primary">
-							<a {href} class="block truncate font-medium hover:underline">
-								{l.equipmentName ?? '(free-form request)'}
-							</a>
-						</td>
+						<td class="cell-primary"><EntityIdentity ref={l.ref} /></td>
 						<td class="min-w-0"><EntityChip ref={l.member} icon={false} /></td>
 						<td class="col-support whitespace-nowrap">
 							{l.dueDate ? formatDateShort(l.dueDate) : '—'}

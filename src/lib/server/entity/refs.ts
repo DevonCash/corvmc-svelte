@@ -28,9 +28,16 @@ import { primaryRoleFor } from '$lib/server/authorization';
 import { isSustainingMemberSql } from '$lib/server/finance/subscription-service';
 import { resolveImageUrl } from '$lib/server/storage';
 import { memberSubtype } from '$lib/utils/entity-ref';
-import { flagEntityTypeToEntity } from '$lib/config';
+import { entityLabels, flagEntityTypeToEntity } from '$lib/config';
 import { formatDate, formatDuration, formatTimeRange } from '$lib/utils/format';
-import type { BandRef, EntityRef, EventRef, MemberRef, ReservationRef } from '$lib/types/entity';
+import type {
+	BandRef,
+	EntityRef,
+	EventRef,
+	GenericRef,
+	MemberRef,
+	ReservationRef
+} from '$lib/types/entity';
 
 /**
  * The `user` table, or any `alias()` of it — the alias arm is what lets a query
@@ -288,4 +295,40 @@ export function toFlagTargetRef(
 		id: type === 'thread' ? null : entityId,
 		title: label ?? '(deleted)'
 	} as EntityRef;
+}
+
+// ---------------------------------------------------------------------------
+// The types whose reference is identity and nothing more
+// ---------------------------------------------------------------------------
+
+/**
+ * A ref for the types that carry no relationships of their own — a suggestion,
+ * a campaign, an audience, an equipment item, a loan, a help article, a thread.
+ *
+ * One constructor rather than seven near-identical ones, because
+ * `types/entity.ts` already models them as a single `GenericRef`: they have an
+ * id, a title, and at most a subtitle and a status. A type that grows a
+ * relationship — the way `event` has a band and `reservation` a booker — earns
+ * its own function at that point, and stops being generic.
+ */
+export function toGenericRef(
+	type: GenericRef['type'],
+	row: {
+		id: string | null;
+		title: string | null;
+		subtitle?: string | null;
+		status?: string | null;
+		slug?: string | null;
+		image?: string | null;
+	}
+): GenericRef {
+	return {
+		type,
+		id: row.id,
+		title: row.title ?? `Unknown ${entityLabels[type].one.toLowerCase()}`,
+		subtitle: row.subtitle ?? null,
+		status: row.status ?? null,
+		slug: row.slug ?? null,
+		image: resolveImageUrl(row.image)
+	};
 }

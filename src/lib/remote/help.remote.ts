@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { toGenericRef } from '$lib/server/entity/refs';
 import { BLURB_MAX, SHORT_TEXT_MAX } from '$lib/config';
 import { error } from '@sveltejs/kit';
 import { query, form, getRequestEvent } from '$app/server';
@@ -78,7 +79,14 @@ export const searchHelp = query(z.string(), async (q) => {
 
 export const getStaffArticles = query(z.void(), async () => {
 	await requireStaff();
-	return listAllArticles();
+	const rows = await listAllArticles();
+	// The published/draft state is the row's status column, so the ref carries
+	// none. `slug` matters: the staff editor is keyed by id but the member-facing
+	// article is addressed by slug, and the ref has to reach both.
+	return rows.map((a) => ({
+		...a,
+		ref: toGenericRef('help', { id: a.id, title: a.title, slug: a.slug })
+	}));
 });
 
 export const getStaffCategories = query(z.void(), async () => {

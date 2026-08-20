@@ -3,7 +3,7 @@ import { equipmentLoan, equipment, equipmentCategory } from '$lib/server/db/sche
 import { user } from '$lib/server/db/schema/authentication';
 import { eq, and, sql, like, or, desc, count } from 'drizzle-orm';
 import { paginate, type PaginationInput } from '$lib/server/db/paginate';
-import { memberRefColumns, toMemberRef } from '$lib/server/entity/refs';
+import { memberRefColumns, toGenericRef, toMemberRef } from '$lib/server/entity/refs';
 import { domainEvents } from '$lib/server/events/event-bus';
 import { getBalance, deductCredits } from '$lib/server/finance/credit-service';
 import { InsufficientCreditsError } from '$lib/server/finance/credit-service';
@@ -498,6 +498,13 @@ export async function listLoans(opts: ListLoansOptions = {}, pagination: Paginat
 		rows: result.rows.map((row) => ({
 			...row.loan,
 			equipmentName: row.equipmentName,
+			// The loan is the row; what was borrowed is its title. A free-form
+			// request has no equipment record behind it, so it says so and does
+			// not link.
+			ref: toGenericRef('loan', {
+				id: row.loan.id,
+				title: row.equipmentName ?? '(free-form request)'
+			}),
 			member: toMemberRef(row.member),
 			isOverdue:
 				row.loan.status === 'checked_out' &&

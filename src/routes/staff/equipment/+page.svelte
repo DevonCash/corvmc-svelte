@@ -6,6 +6,7 @@
 	import Table from '$lib/components/shared/Table.svelte';
 	import FilterBar from '$lib/components/shared/FilterBar.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
+	import { EntityIdentity } from '$lib/components/shared/entity';
 	import Badge from '$lib/components/shared/Badge.svelte';
 	import { rowLink } from '$lib/actions/row-link';
 	import { resolve } from '$app/paths';
@@ -155,11 +156,8 @@
 						<td class="w-px">
 							<StatusBadge status={e.deletedAt ? 'deactivated' : e.status} />
 						</td>
-						<!-- Category was its own column; as the subline it costs no width. -->
-						<td class="cell-primary">
-							<a {href} class="block truncate font-medium hover:underline">{e.name}</a>
-							<div class="truncate text-muted">{e.category.name}</div>
-						</td>
+						<!-- Category was its own column; as the ref's subline it costs no width. -->
+						<td class="cell-primary"><EntityIdentity ref={e.ref} /></td>
 						<td class="col-support">
 							<Badge
 								size="sm"
