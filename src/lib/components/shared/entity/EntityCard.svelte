@@ -97,7 +97,12 @@
 	const ringClass = $derived.by(() => {
 		if (!inMedia || !ref.status) return '';
 		const colour = variants[ref.status]?.color;
-		return `ring-2 ${(colour && statusRing[colour]) || 'ring-base-content/30'}`;
+		// 4px on a poster, 2px on a tile — the same width reads very differently
+		// against a ~230px poster edge than around a 56px avatar, where it would
+		// go back to shouting. Both spelled literally: Tailwind only emits classes
+		// it can see in source.
+		const width = isPoster ? 'ring-4' : 'ring-2';
+		return `${width} ${(colour && statusRing[colour]) || 'ring-base-content/30'}`;
 	});
 </script>
 
