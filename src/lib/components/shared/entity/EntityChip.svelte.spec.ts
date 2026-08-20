@@ -74,6 +74,22 @@ describe('EntityChip', () => {
 			await expect.element(page.getByText('4 members')).toBeVisible();
 		});
 
+		/**
+		 * On touch the chip's own tap opens the preview instead of navigating, so
+		 * without a control inside it a phone could reach the preview and never
+		 * the record.
+		 */
+		it('offers a way through to the record', async () => {
+			render(Harness, { ref: fakeRef('band', { id: 'band-1', slug: 'vu' }) });
+			await page
+				.getByRole('link', { name: /Velvet Underground/ })
+				.first()
+				.hover();
+			const go = page.getByRole('link', { name: 'Open The Velvet Underground' });
+			await expect.element(go).toBeVisible();
+			expect(go.element().getAttribute('href')).toBe('/staff/bands/band-1');
+		});
+
 		it('can be turned off', async () => {
 			render(Harness, {
 				ref: fakeRef('band', { id: 'band-1', slug: 'vu', subtitle: '4 members' }),

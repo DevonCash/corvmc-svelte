@@ -3,6 +3,8 @@
 	import { LinkPreview } from 'bits-ui';
 	import { browser } from '$app/environment';
 	import EntityIdentity from './EntityIdentity.svelte';
+	import Button from '../Button.svelte';
+	import { IconArrowRight } from '@tabler/icons-svelte';
 	import type { EntityRef } from '$lib/types/entity';
 	import StatusMark from './StatusMark.svelte';
 	import { entityIcon, isNoteworthyStatus, toneFor } from './registry';
@@ -161,10 +163,25 @@
 					show the same thing the reader would find by following the link, and a
 					second layout for it is a second thing to keep true.
 				-->
-				<EntityIdentity {ref} size="md" status />
+				<EntityIdentity {ref} size="md" status meta={href ? open_ : undefined} />
 			</LinkPreview.Content>
 		</LinkPreview.Portal>
 	</LinkPreview.Root>
 {:else}
 	{@render chip()}
 {/if}
+
+{#snippet open_()}
+	<!--
+		The explicit way through. On touch the chip's own tap opens this preview
+		instead of navigating, so without a control here a phone could reach the
+		preview and never the record. `aria-label` rather than `title`: an
+		icon-only button needs a name, and Button's `title` renders a tooltip,
+		which inside a hover preview is a popover on a popover.
+
+		Same arrow `CrossRefList` already uses for "go to this record".
+	-->
+	<Button href={href!} shape="square" size="sm" variant="ghost" aria-label="Open {ref.title}">
+		<IconArrowRight size={18} />
+	</Button>
+{/snippet}
