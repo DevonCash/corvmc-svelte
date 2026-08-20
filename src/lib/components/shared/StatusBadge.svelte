@@ -267,7 +267,14 @@
 		{label}
 	</span>
 {:else}
-	<span class="tooltip tooltip-right" data-tip={label}>
+	<!--
+		`role="img"` + `aria-label` because `data-tip` is daisyUI's CSS-only
+		tooltip: it draws through ::before, so assistive tech never sees it. Without
+		this the icon-only form has no accessible name at all — every staff table's
+		status column announced its header and then nothing for each value, and the
+		entity cards carry status as a glyph alone.
+	-->
+	<span class="tooltip tooltip-right" data-tip={label} role="img" aria-label={label}>
 		<variant.icon {size} class="{variant.color} {className}" />
 	</span>
 {/if}
