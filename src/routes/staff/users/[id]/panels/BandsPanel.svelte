@@ -2,7 +2,7 @@
 	import { getUserBands } from '$lib/remote/bands.remote';
 	import { getUserShows, getUserTicketsAndRsvps } from '$lib/remote/events.remote';
 	import { getUserListings } from '$lib/remote/community-events.remote';
-	import AsyncCard from './AsyncCard.svelte';
+	import { RelatedList } from '$lib/components/shared/entity';
 	import Table from '$lib/components/shared/Table.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
@@ -20,7 +20,7 @@
 	traversable band → members, so a staff member holding a name had no way to
 	reach the bands behind it.
 -->
-<AsyncCard title="Bands" result={getUserBands(id)}>
+<RelatedList title="Bands" result={getUserBands(id)}>
 	{#snippet children(bands)}
 		{#if bands.length === 0}
 			<EmptyState title="Not in any bands" description="No band membership or invitation." />
@@ -42,9 +42,9 @@
 			</ul>
 		{/if}
 	{/snippet}
-</AsyncCard>
+</RelatedList>
 
-<AsyncCard title="Shows played" result={getUserShows(id)}>
+<RelatedList title="Shows played" result={getUserShows(id)}>
 	{#snippet children(shows)}
 		{#if shows.upcoming.length === 0 && shows.past.length === 0}
 			<EmptyState
@@ -73,9 +73,9 @@
 			</Table>
 		{/if}
 	{/snippet}
-</AsyncCard>
+</RelatedList>
 
-<AsyncCard title="Community listings" result={getUserListings(id)}>
+<RelatedList title="Community listings" result={getUserListings(id)}>
 	{#snippet children(data)}
 		{@const all = [...data.rejected, ...data.listings]}
 		{#if all.length === 0}
@@ -105,9 +105,9 @@
 			</Table>
 		{/if}
 	{/snippet}
-</AsyncCard>
+</RelatedList>
 
-<AsyncCard title="Tickets & RSVPs" result={getUserTicketsAndRsvps(id)}>
+<RelatedList title="Tickets & RSVPs" result={getUserTicketsAndRsvps(id)}>
 	{#snippet children(data)}
 		{#if data.tickets.length === 0 && data.rsvps.length === 0}
 			<EmptyState
@@ -145,4 +145,4 @@
 			</Table>
 		{/if}
 	{/snippet}
-</AsyncCard>
+</RelatedList>

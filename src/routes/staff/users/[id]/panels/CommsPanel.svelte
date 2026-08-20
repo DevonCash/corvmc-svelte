@@ -9,7 +9,7 @@
 	import { getUserNotifications } from '$lib/remote/notifications.remote';
 	import { getUserMarketing } from '$lib/remote/marketing.remote';
 	import { getUserOverview } from '$lib/remote/users.remote';
-	import AsyncCard from './AsyncCard.svelte';
+	import { RelatedList } from '$lib/components/shared/entity';
 	import InfoCard from '$lib/components/shared/InfoCard.svelte';
 	import Table from '$lib/components/shared/Table.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
@@ -178,7 +178,7 @@
 	</InfoCard>
 {/await}
 
-<AsyncCard title="Reports against this member" result={getFlagsAgainstUser(id)}>
+<RelatedList title="Reports against this member" result={getFlagsAgainstUser(id)}>
 	{#snippet children(flags)}
 		{#if flags.length === 0}
 			<EmptyState title="No reports" description="Nobody has reported this member's profile." />
@@ -202,9 +202,9 @@
 			</Table>
 		{/if}
 	{/snippet}
-</AsyncCard>
+</RelatedList>
 
-<AsyncCard title="Reports they filed" result={getFlagsByUser(id)}>
+<RelatedList title="Reports they filed" result={getFlagsByUser(id)}>
 	{#snippet children(flags)}
 		{#if flags.length === 0}
 			<EmptyState title="None filed" description="This member has not reported anyone." />
@@ -228,9 +228,9 @@
 			</Table>
 		{/if}
 	{/snippet}
-</AsyncCard>
+</RelatedList>
 
-<AsyncCard title="Conversations" result={getUserThreads({ userId: id, email })}>
+<RelatedList title="Conversations" result={getUserThreads({ userId: id, email })}>
 	{#snippet children(data)}
 		{@const groups = [
 			{ label: 'Portal', rows: data.portal },
@@ -273,13 +273,13 @@
 			{/each}
 		{/if}
 	{/snippet}
-</AsyncCard>
+</RelatedList>
 
 <!--
 	Preferences alongside the sends, because the question they answer together is
 	"why didn't they get the email?" — which is unanswerable from either half.
 -->
-<AsyncCard title="Notifications" result={getUserNotifications(id)}>
+<RelatedList title="Notifications" result={getUserNotifications(id)}>
 	{#snippet children(data)}
 		<h4 class="mb-1 text-subtle font-semibold uppercase">Channels</h4>
 		{@const overrides = Object.entries(data.preferences)}
@@ -320,9 +320,9 @@
 			</ul>
 		{/if}
 	{/snippet}
-</AsyncCard>
+</RelatedList>
 
-<AsyncCard title="Email lists" result={getUserMarketing(id)}>
+<RelatedList title="Email lists" result={getUserMarketing(id)}>
 	{#snippet children(data)}
 		{#if !data.subscriber}
 			<EmptyState
@@ -348,4 +348,4 @@
 			</div>
 		{/if}
 	{/snippet}
-</AsyncCard>
+</RelatedList>
