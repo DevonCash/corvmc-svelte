@@ -675,6 +675,11 @@ test.describe('volunteering — shifts and events', () => {
 		await search.click();
 		await search.pressSequentially('E2E Sludge');
 		await reopened.getByRole('option', { name: SEED_VOL_EVENT_TITLE }).click();
+		// SearchSelect swaps the input for a badge the moment the pick commits, so
+		// this is how the test knows the choice reached the form. Saving without it
+		// posts an empty `eventId`, which reads as "cleared" — the assertion below
+		// then fails on a shift that was never re-attached.
+		await expect(search).toHaveCount(0, { timeout: 15000 });
 		await modalSubmit(page, 'Save').click();
 
 		await expect(page.getByRole('link', { name: SEED_VOL_EVENT_TITLE })).toBeVisible({

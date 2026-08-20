@@ -104,8 +104,8 @@ test.describe('member messaging', () => {
 		await picker.click();
 		await picker.pressSequentially('E2E Message Recip');
 		await page.getByRole('option', { name: new RegExp(SEED_MSG_RECIPIENT_NAME) }).click(WAIT);
-		// The pick commits a tick after the click — SearchSelect swaps the input for
-		// a badge once it lands. Submitting before that posts no recipient at all.
+		// SearchSelect swaps the input for a badge once the pick commits; waiting for
+		// that is how the test knows the choice reached the form before submitting.
 		await expect(picker).toHaveCount(0, WAIT);
 		await page.getByPlaceholder('Say who you are').fill(body);
 		await page.getByRole('button', { name: 'Send request' }).click();

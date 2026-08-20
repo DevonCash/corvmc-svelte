@@ -192,9 +192,8 @@ Before opening a PR that adds/removes/moves a route or touches help articles:
 4. New feature shipped? Add its row to `docs/reports/parity-report.md` (checklist phase 8)
    and index any new doc in `docs/README.md`.
 
-A nightly GitHub Action may also open docs-update PRs automatically (it uses the same
-deterministic detector, then drafts changes with an LLM). Review those PRs like any
-other — the full picture is in the
+Keeping the docs honest is a manual step in every PR that changes behaviour — nothing
+watches for drift on your behalf. The full procedure is in the
 [operations manual §7](../architecture/operations-manual.md#7-keeping-the-docs-healthy).
 
 ## Working with Claude Code

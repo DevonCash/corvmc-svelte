@@ -4,6 +4,11 @@ on:
   push:
     branches: [main]
   pull_request:
+  # `main` merges through a merge queue: GitHub builds a `gh-readonly-queue/main/...`
+  # ref holding main plus the queued PR(s) and merges only if the checks pass there.
+  # Without this trigger the required checks never report and nothing ever leaves the
+  # queue.
+  merge_group:
 
 # A new push supersedes the run already in flight for the same ref, so stale runs
 # stop burning runner capacity that the replacement run then has to queue for.
@@ -39,7 +44,12 @@ jobs:
 
   lint-changed:
     name: Lint (changed)
-    if: github.event_name == 'pull_request'
+    # Everything except a push to `main`, which the full `lint` job above covers. This
+    # must not be narrowed back to `pull_request`: "Lint (changed)" is a required check,
+    # a job skipped by its `if:` reports success, and the queue would then merge code
+    # nothing linted. `pnpm lint:changed` diffs against `origin/main`, an ancestor of the
+    # queue ref, so the changed-file set is still right there.
+    if: github.event_name != 'push'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
