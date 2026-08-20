@@ -16,7 +16,7 @@
 
 	// A resolved prop, not an awaited query: a top-level await here would compile
 	// the fields.X.as() expressions below into async deriveds (see BandProfileForm).
-	let { slug }: { slug: string } = $props();
+	let { slug, readonly = false }: { slug: string; readonly?: boolean } = $props();
 
 	const fields = changeBandAddress.fields;
 	const baseDomain = $derived(baseDomainFromSiteUrl(env.PUBLIC_SITE_URL));
@@ -46,11 +46,18 @@
 			<code class="text-xs">/directory/bands/{slug}</code>
 			and your dashboard at <code class="text-xs">/band/{slug}</code>.
 		</p>
-		<div class="card-actions mt-2 justify-end">
-			<Button variant="default" size="sm" outline onclick={() => (showChange = true)}
-				>Change address</Button
-			>
-		</div>
+		{#if readonly}
+			<!-- Admins can see the address; only the owner can move it, because
+			     `changeBandAddress` is owner-guarded. A button that 403s would be
+			     worse than none. -->
+			<p class="text-subtle mt-2">Only the band's owner can change this address.</p>
+		{:else}
+			<div class="card-actions mt-2 justify-end">
+				<Button variant="default" size="sm" outline onclick={() => (showChange = true)}
+					>Change address</Button
+				>
+			</div>
+		{/if}
 	</InfoCard>
 </section>
 

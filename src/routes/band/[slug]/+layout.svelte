@@ -18,17 +18,42 @@
 	import Nav from '$lib/components/shared/Nav';
 	import { page } from '$app/state';
 	import { getBandLayout } from '$lib/remote/layout.remote';
+	import { bandNavItems, type BandNavKey } from './nav-items';
 
 	let { children } = $props();
 
 	let layout = $derived(await getBandLayout(page.params.slug!));
 
-	const base = $derived(`/band/${layout.band.slug}`);
 	// A custom domain only replaces the subdomain once it is actually serving.
 	const liveCustomDomain = $derived(
 		layout.band.customDomainStatus === 'active' ? layout.band.customDomain : null
 	);
-	const isOwnerOrAdmin = $derived(layout.userRole === 'owner' || layout.userRole === 'admin');
+	// The gating itself lives in `nav-items.ts` as data, so it can be asserted
+	// against for every role and flag combination — this file has had the role
+	// checks wrong twice. The template below only decides how to draw each entry.
+	const navItems = $derived(
+		bandNavItems({
+			slug: layout.band.slug,
+			bandId: layout.band.id,
+			tier: layout.band.tier,
+			userRole: layout.userRole,
+			isStaff: layout.isStaff,
+			features: layout.features
+		})
+	);
+
+	const icons: Record<BandNavKey, typeof IconLayoutDashboard> = {
+		dashboard: IconLayoutDashboard,
+		members: IconUsersGroup,
+		reservations: IconCalendar,
+		events: IconCalendarEvent,
+		edit: IconPencil,
+		'page-editor': IconBrush,
+		'live-site': IconExternalLink,
+		subscription: IconCrown,
+		settings: IconSettings,
+		'staff-tools': IconSettings
+	};
 
 	const panels = $derived([
 		{ key: 'member', label: 'Member', href: '/member', type: 'member' as const },
@@ -52,48 +77,19 @@
 		</div>
 	{/snippet}
 	{#snippet navigation()}
-		<Nav.Item href={base} label="Dashboard">
-			{#snippet icon()}<IconLayoutDashboard />{/snippet}
-		</Nav.Item>
-		<Nav.Item href={`${base}/members`} label="Members">
-			{#snippet icon()}<IconUsersGroup />{/snippet}
-		</Nav.Item>
-		{#if layout.features.bandReservations}
-			<Nav.Item href={`${base}/reservations`} label="Reservations">
-				{#snippet icon()}<IconCalendar />{/snippet}
-			</Nav.Item>
-		{/if}
-		<Nav.Item href={`${base}/events`} label="Events">
-			{#snippet icon()}<IconCalendarEvent />{/snippet}
-		</Nav.Item>
-		{#if isOwnerOrAdmin}
-			<Nav.Item href={`${base}/edit`} label="Edit Profile">
-				{#snippet icon()}<IconPencil />{/snippet}
-			</Nav.Item>
-		{/if}
-		{#if layout.features.bandPremium && isOwnerOrAdmin && layout.band.tier === 'premium'}
-			<Nav.Item href={`${base}/page-editor`} label="Page Editor">
-				{#snippet icon()}<IconBrush />{/snippet}
-			</Nav.Item>
+		{#each navItems as item (item.key)}
+			{@const Icon = icons[item.key]}
 			<Nav.Item
-				href={bandSiteUrl(layout.band.slug, env.PUBLIC_SITE_URL, liveCustomDomain)}
-				label="View Live Site"
-				target="_blank"
-				rel="noopener"
+				href={item.key === 'live-site'
+					? bandSiteUrl(layout.band.slug, env.PUBLIC_SITE_URL, liveCustomDomain)
+					: item.href}
+				label={item.label}
+				target={item.external ? '_blank' : undefined}
+				rel={item.external ? 'noopener' : undefined}
 			>
-				{#snippet icon()}<IconExternalLink />{/snippet}
+				{#snippet icon()}<Icon />{/snippet}
 			</Nav.Item>
-		{/if}
-		{#if layout.userRole === 'owner'}
-			{#if layout.features.bandPremium}
-				<Nav.Item href={`${base}/subscription`} label="Subscription">
-					{#snippet icon()}<IconCrown />{/snippet}
-				</Nav.Item>
-			{/if}
-			<Nav.Item href={`${base}/settings`} label="Settings">
-				{#snippet icon()}<IconSettings />{/snippet}
-			</Nav.Item>
-		{/if}
+		{/each}
 	{/snippet}
 	<ErrorToastBoundary>
 		{@render children()}
