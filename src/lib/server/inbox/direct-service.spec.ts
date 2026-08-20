@@ -105,17 +105,6 @@ vi.mock('$lib/server/db/schema/authentication', () => ({
 		directoryVisibility: 'user.directoryVisibility'
 	}
 }));
-// direct-service interpolates the drizzle table objects into its raw SQL rather
-// than spelling the names out, so that a dropped table breaks the build instead
-// of the page. That means the schema module has to be mocked here too.
-vi.mock('$lib/server/db/schema/standing', () => ({
-	memberStanding: {
-		__table: 'member_standing',
-		userId: 'standing.userId',
-		scope: 'standing.scope',
-		status: 'standing.status'
-	}
-}));
 vi.mock('drizzle-orm/sqlite-core', () => ({
 	alias: (t: unknown, name: string) => ({ ...(t as object), __alias: name })
 }));
@@ -443,7 +432,14 @@ describe('replyToDirectThread', () => {
 		expect(built).toContain('isNotNull'); // caller has accepted
 		expect(built).toContain('accepted_at IS NOT NULL'); // counterpart has accepted
 		expect(built).toContain('user_block'); // no block either way
-		expect(built).toContain("ms.status = 'disabled'"); // nobody switched off
+		// Both halves of "switched off", and the table each lives in. Named
+		// explicitly because these are raw `sql` strings: #224 renamed
+		// messaging_standing to member_standing and nothing here or in the type
+		// checker noticed, so every list 500'd until it reached production.
+		expect(built).toContain('member_standing'); // staff switched them off…
+		expect(built).toContain("ms.status = 'disabled'");
+		expect(built).toContain('accepts_direct_messages'); // …or they did themselves
+		expect(built).not.toContain('messaging_standing');
 	});
 
 	it('refuses an empty body without querying', async () => {

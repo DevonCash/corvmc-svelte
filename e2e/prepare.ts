@@ -37,6 +37,7 @@ import { seedFeatureFlags } from './fixtures/seed-feature-flags';
 import { seedCommunityEvents } from './fixtures/seed-community-events';
 import { seedSuggestions } from './fixtures/seed-suggestions';
 import { seedMessaging } from './fixtures/seed-messaging';
+import { seedInboxAwaiting } from './fixtures/seed-inbox-awaiting';
 
 const MIGRATIONS_DIR = join(REPO_ROOT, 'migrations');
 const STAMP = join(E2E_STATE_ROOT, 'applied-migrations');
@@ -86,4 +87,5 @@ await seedCommunityEvents();
 // After the staff fixture: one seeded vote belongs to the staff user.
 await seedSuggestions();
 await seedMessaging();
+await seedInboxAwaiting();
 await seedFeatureFlags();

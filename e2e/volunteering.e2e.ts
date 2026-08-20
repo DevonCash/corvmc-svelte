@@ -141,7 +141,7 @@ test.describe('volunteering — staff review queue', () => {
 		// Kept staff-side deliberately: signing a second user in over an existing
 		// session in the same browser context does not swap the session, so the
 		// member view is asserted separately from its own login.
-		await page.getByRole('radio', { name: /Returned/ }).click();
+		await page.getByRole('tab', { name: /Returned/ }).click();
 		const rejected = rowFor(page, SEED_VOL_LOG_REJECT_DESC);
 		await expect(rejected).toBeVisible({ timeout: 15000 });
 		await expect(rejected).toContainText(reason);

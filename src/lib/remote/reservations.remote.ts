@@ -31,6 +31,7 @@ import {
 } from 'drizzle-orm';
 import { getBySlug, getById as getBandById } from '$lib/server/band/band-service';
 import { band } from '$lib/server/db/schema/band';
+import { event } from '$lib/server/db/schema/event';
 import { formatDateInTz, buildDateInTz } from '$lib/server/reservation/timezone';
 import { resolveImageUrl } from '$lib/server/storage';
 import { describeFrequency, monthlyModeOf } from '$lib/server/reservation/rrule-helpers';
@@ -234,11 +235,14 @@ export const getStaffReservationDetail = query(z.string(), async (id) => {
 			memberImage: user.image,
 			bandId: band.id,
 			bandName: band.name,
-			bandSlug: band.slug
+			bandSlug: band.slug,
+			eventId: event.id,
+			eventTitle: event.title
 		})
 		.from(reservation)
 		.innerJoin(user, eq(reservation.createdByUserId, user.id))
 		.leftJoin(band, bandBookerJoin)
+		.leftJoin(event, eventBookerJoin)
 		.where(eq(reservation.id, id))
 		.limit(1);
 
@@ -265,6 +269,8 @@ export const getStaffReservationDetail = query(z.string(), async (id) => {
 		bandId: rows[0].bandId,
 		bandName: rows[0].bandName,
 		bandSlug: rows[0].bandSlug,
+		eventId: rows[0].eventId,
+		eventTitle: rows[0].eventTitle,
 		createdByStaffName
 	};
 
@@ -790,6 +796,12 @@ const staffReservationFiltersSchema = z.object({
  */
 const bandBookerJoin = and(eq(reservation.bookerType, 'band'), eq(band.id, reservation.bookerId));
 
+/** The same discriminated shape for events: an event hold carries the event id. */
+const eventBookerJoin = and(
+	eq(reservation.bookerType, 'event'),
+	eq(event.id, reservation.bookerId)
+);
+
 /** Staff: paginated, filtered reservation list. */
 export const getStaffReservations = query(staffReservationFiltersSchema, async (filters) => {
 	await requireStaff();
@@ -831,7 +843,12 @@ export const getStaffReservations = query(staffReservationFiltersSchema, async (
 	if (filters.search) {
 		const pattern = `%${filters.search}%`;
 		conditions.push(
-			or(like(user.name, pattern), like(user.email, pattern), like(band.name, pattern))
+			or(
+				like(user.name, pattern),
+				like(user.email, pattern),
+				like(band.name, pattern),
+				like(event.title, pattern)
+			)
 		);
 	}
 
@@ -857,11 +874,14 @@ export const getStaffReservations = query(staffReservationFiltersSchema, async (
 			memberRole: primaryRoleFor(user.id),
 			memberSustaining: isSustainingMemberSql(user.id),
 			bandId: band.id,
-			bandName: band.name
+			bandName: band.name,
+			eventId: event.id,
+			eventTitle: event.title
 		})
 		.from(reservation)
 		.innerJoin(user, eq(reservation.createdByUserId, user.id))
 		.leftJoin(band, bandBookerJoin)
+		.leftJoin(event, eventBookerJoin)
 		.where(where)
 		.orderBy(tab === 'upcoming' ? asc(reservation.startsAt) : desc(reservation.startsAt))
 		.$dynamic();
@@ -871,6 +891,7 @@ export const getStaffReservations = query(staffReservationFiltersSchema, async (
 		.from(reservation)
 		.innerJoin(user, eq(reservation.createdByUserId, user.id))
 		.leftJoin(band, bandBookerJoin)
+		.leftJoin(event, eventBookerJoin)
 		.where(where);
 
 	return paginate(dataQ, countQ, { page: filters.page ?? 1, pageSize: 50 });

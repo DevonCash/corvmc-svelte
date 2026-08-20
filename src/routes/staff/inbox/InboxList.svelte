@@ -24,6 +24,7 @@
 		getAssignableStaff
 	} from '$lib/remote/inbox.remote';
 	import { channelIcon, channelLabel } from '$lib/components/inbox/channels';
+	import { threadDisplayStatus } from '$lib/components/inbox/thread-status';
 
 	type StatusView = 'open' | 'snoozed' | 'resolved' | 'all';
 	const statusViews: StatusView[] = ['open', 'snoozed', 'resolved', 'all'];
@@ -43,6 +44,8 @@
 	let statusView = $state(parseStatus(initial.get('status')));
 	let channelFilter = $state(initial.get('channel') ?? '');
 	let assignedFilter = $state(initial.get('assigned') ?? '');
+	// '' | 'yes' (waiting on them) | 'no' (waiting on us).
+	let waitingFilter = $state(initial.get('waiting') ?? '');
 	// `searchText` (not `search`): FilterBar's always-visible slot is a snippet
 	// named `search`, and a snippet shadows a same-named script binding.
 	let searchText = $state(initial.get('q') ?? '');
@@ -67,6 +70,7 @@
 		if (statusView !== 'open') pairs.push(['status', statusView]);
 		if (channelFilter) pairs.push(['channel', channelFilter]);
 		if (assignedFilter) pairs.push(['assigned', assignedFilter]);
+		if (waitingFilter) pairs.push(['waiting', waitingFilter]);
 		if (searchQuery) pairs.push(['q', searchQuery]);
 		if (pageNumber > 1) pairs.push(['page', String(pageNumber)]);
 
@@ -84,6 +88,7 @@
 		status: statusView === 'all' ? undefined : statusView,
 		channel: (channelFilter || undefined) as (typeof inboxChannels)[number] | undefined,
 		assigned: assignedFilter || undefined,
+		awaiting: (waitingFilter || undefined) as 'yes' | 'no' | undefined,
 		page: pageNumber
 	});
 
@@ -97,7 +102,10 @@
 	// The status view is a view, not a filter — it always has a value, so counting
 	// it would leave "Clear" permanently offered.
 	const activeFilterCount = $derived(
-		(searchQuery ? 1 : 0) + (channelFilter ? 1 : 0) + (assignedFilter ? 1 : 0)
+		(searchQuery ? 1 : 0) +
+			(channelFilter ? 1 : 0) +
+			(assignedFilter ? 1 : 0) +
+			(waitingFilter ? 1 : 0)
 	);
 
 	function clearFilters() {
@@ -105,6 +113,7 @@
 		searchQuery = '';
 		channelFilter = '';
 		assignedFilter = '';
+		waitingFilter = '';
 		pageNumber = 1;
 	}
 </script>
@@ -113,24 +122,23 @@
 	<h1 class="text-xl font-bold">Inbox</h1>
 
 	{#await counts then c}
-		<!-- The four tabs are wider than a phone; without this the last one is
-		     clipped off the edge with no way to reach it. -->
-		<div class="overflow-x-auto pb-1">
-			<TabBar
-				class="w-max"
-				tabs={[
-					{ key: 'open', label: 'Open', badge: c.open },
-					{ key: 'snoozed', label: 'Snoozed', badge: c.snoozed },
-					{ key: 'resolved', label: 'Resolved', badge: c.resolved },
-					{ key: 'all', label: 'All', badge: c.all }
-				]}
-				active={statusView}
-				onchange={(key) => {
-					statusView = key as StatusView;
-					pageNumber = 1;
-				}}
-			/>
-		</div>
+		<!-- `collapse`: below md this becomes a dropdown naming the active tab.
+		     Four tabs never fit the list pane, which is narrower than the full-width
+		     page this came from. -->
+		<TabBar
+			collapse
+			tabs={[
+				{ key: 'open', label: 'Open', badge: c.open },
+				{ key: 'snoozed', label: 'Snoozed', badge: c.snoozed },
+				{ key: 'resolved', label: 'Resolved', badge: c.resolved },
+				{ key: 'all', label: 'All', badge: c.all }
+			]}
+			active={statusView}
+			onchange={(key) => {
+				statusView = key as StatusView;
+				pageNumber = 1;
+			}}
+		/>
 	{/await}
 
 	<FilterBar activeCount={activeFilterCount} onclear={clearFilters}>
@@ -180,6 +188,21 @@
 				{/each}
 			</Select>
 		{/await}
+		<!-- Which side the ball is on. Awaiting threads stay in the Open tab, so
+		     this is how staff narrow it down to what they still owe an answer. -->
+		<Select
+			size="sm"
+			aria-label="Waiting on"
+			value={waitingFilter}
+			onchange={(e: Event) => {
+				waitingFilter = (e.currentTarget as HTMLSelectElement).value;
+				pageNumber = 1;
+			}}
+		>
+			<option value="">Waiting on anyone</option>
+			<option value="no">Needs a reply</option>
+			<option value="yes">Awaiting their reply</option>
+		</Select>
 	</FilterBar>
 
 	<div class="min-h-0 flex-1 overflow-y-auto">
@@ -219,7 +242,9 @@
 										<span class="truncate font-medium">
 											{who ?? t.subject ?? channelLabel(t.channel)}
 										</span>
-										<StatusBadge status={t.status} />
+										<!-- `label`: "Awaiting reply" is the whole point of the marker,
+										     and an icon-only badge would say nothing. -->
+										<StatusBadge status={threadDisplayStatus(t)} label />
 									</span>
 
 									{#if t.subject && who}

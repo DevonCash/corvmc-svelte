@@ -1,21 +1,8 @@
 import { db } from '$lib/server/db';
 import { inboxThread, inboxMessage, inboxParticipant } from '$lib/server/db/schema/inbox';
 import { user } from '$lib/server/db/schema/authentication';
-import { memberStanding } from '$lib/server/db/schema/standing';
-import {
-	and,
-	count,
-	desc,
-	eq,
-	gt,
-	inArray,
-	isNull,
-	isNotNull,
-	ne,
-	or,
-	sql,
-	type SQLWrapper
-} from 'drizzle-orm';
+import { and, count, desc, eq, gt, inArray, isNull, isNotNull, ne, or, sql } from 'drizzle-orm';
+import type { AnyColumn, SQL } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/sqlite-core';
 import type { PaginationInput } from '$lib/server/db/paginate';
 import { paginate } from '$lib/server/db/paginate';
@@ -87,35 +74,32 @@ function counterpartAccepted(userId: string) {
 }
 
 /**
- * The SQL twin of `messagingIsDisabled()`: a staff decision OR the member's own
- * switch, as one expression that can sit in a WHERE clause.
+ * SQL for `messagingIsDisabled`, for the four places that need it inside a
+ * WHERE clause rather than as a separate round-trip.
  *
- * **Both halves are load-bearing.** Before the standing tables were merged,
- * `messaging_standing` held the staff decision *and* the member's preference, so
- * one EXISTS covered both. `member_standing` holds only the first — the
- * preference moved to `user.accepts_direct_messages` — so a reader that checks
- * standing alone quietly stops honouring "I turned messaging off".
+ * Both halves matter and they live in different tables now: staff switching
+ * someone off is `member_standing` scoped to `messaging`, while the member's own
+ * switch is `user.accepts_direct_messages`. They used to be one row with a
+ * `source` column, which is what `messaging_standing` was; #224 split it. These
+ * predicates are raw `sql`, so nothing type-checked them and they kept naming
+ * the dropped table for a day — every conversation list 500'd
+ * (JAVASCRIPT-SVELTEKIT-2F/2G). Keep them here, once, rather than inline.
  *
- * The tables are interpolated rather than spelled out. These four call sites all
- * went on naming `messaging_standing` after it was dropped, and the page 500'd
- * rather than the build failing. Interpolated, the next such migration cannot
- * get that far. `db/raw-sql-tables.spec.ts` covers the raw SQL that remains.
+ * A LEFT JOIN because absence of a standing row means good standing.
  */
-function messagingDisabled(userId: SQLWrapper) {
-	return sql`(EXISTS (SELECT 1 FROM ${memberStanding} ms
-	                    WHERE ms.user_id = ${userId}
-	                      AND ms.scope = 'messaging'
-	                      AND ms.status = 'disabled')
-	            OR EXISTS (SELECT 1 FROM ${user} u
-	                       WHERE u.id = ${userId}
-	                         AND u.accepts_direct_messages = 0))`;
+function messagingDisabledFor(userIdExpr: SQL | AnyColumn) {
+	return sql`EXISTS (SELECT 1 FROM "user" u
+	                   LEFT JOIN member_standing ms ON ms.user_id = u.id
+	                                               AND ms.scope = 'messaging'
+	                   WHERE u.id = ${userIdExpr}
+	                     AND (u.accepts_direct_messages = 0 OR ms.status = 'disabled'))`;
 }
 
 /** Nobody on this thread has messaging switched off. */
 function neitherPartyDisabled() {
-	return sql`NOT EXISTS (SELECT 1 FROM ${inboxParticipant} p
+	return sql`NOT EXISTS (SELECT 1 FROM inbox_participant p
 	                       WHERE p.thread_id = ${inboxThread.id}
-	                         AND ${messagingDisabled(sql`p.user_id`)})`;
+	                         AND ${messagingDisabledFor(sql`p.user_id`)})`;
 }
 
 /** No block between the two people on this thread, in either direction. */
@@ -387,7 +371,7 @@ export async function listDirectThreads(userId: string, pagination: PaginationIn
 		// A member who has switched messaging off disappears from the other
 		// person's list. They keep their own history; nobody gets to keep writing
 		// at someone who cannot answer.
-		sql`NOT ${messagingDisabled(other.userId)}`
+		sql`NOT ${messagingDisabledFor(other.userId)}`
 	);
 
 	const dataQuery = db
@@ -457,7 +441,7 @@ export async function listMemberConversations(userId: string, pagination: Pagina
 		// list. Their own history stays; nobody keeps writing at someone who
 		// cannot answer. Portal threads have no `other`, so this is vacuously true
 		// for them.
-		sql`NOT ${messagingDisabled(other.userId)}`
+		sql`NOT ${messagingDisabledFor(other.userId)}`
 	);
 
 	const dataQuery = db
@@ -538,7 +522,7 @@ export async function getDirectThread(threadId: string, userId: string) {
 			and(
 				eq(inboxThread.id, threadId),
 				eq(inboxThread.channel, 'direct'),
-				sql`NOT ${messagingDisabled(other.userId)}`
+				sql`NOT ${messagingDisabledFor(other.userId)}`
 			)
 		)
 		.limit(1);

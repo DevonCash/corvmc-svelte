@@ -187,24 +187,21 @@
 	{/await}
 
 	{#await counts then c}
-		<!-- Four tabs are wider than a phone; without this the last is clipped off
-		     the edge with no way to reach it. -->
-		<div class="mb-4 overflow-x-auto pb-1">
-			<TabBar
-				class="w-max"
-				tabs={[
-					{ key: 'pending', label: 'Pending', badge: c.pending },
-					{ key: 'approved', label: 'Approved', badge: c.approved },
-					{ key: 'rejected', label: 'Returned', badge: c.rejected },
-					{ key: 'all', label: 'All', badge: c.all }
-				]}
-				active={statusView}
-				onchange={(key) => {
-					statusView = key as StatusView;
-					pageNumber = 1;
-				}}
-			/>
-		</div>
+		<TabBar
+			class="mb-4"
+			collapse
+			tabs={[
+				{ key: 'pending', label: 'Pending', badge: c.pending },
+				{ key: 'approved', label: 'Approved', badge: c.approved },
+				{ key: 'rejected', label: 'Returned', badge: c.rejected },
+				{ key: 'all', label: 'All', badge: c.all }
+			]}
+			active={statusView}
+			onchange={(key) => {
+				statusView = key as StatusView;
+				pageNumber = 1;
+			}}
+		/>
 	{/await}
 
 	<FilterBar activeCount={activeFilterCount} onclear={clearFilters}>

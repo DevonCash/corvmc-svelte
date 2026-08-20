@@ -45,13 +45,28 @@ function declaredTables(): Set<string> {
 	return names;
 }
 
+/**
+ * Strip comments before scanning.
+ *
+ * Prose mentioning ``raw `sql` `` opens a phantom template that swallows the
+ * rest of the comment, and any "JOIN" in that English then reads as a table
+ * name. Block comments are stripped whole; line comments only when they start
+ * the line, so a `https://` inside a string is left alone.
+ */
+function withoutComments(text: string): string {
+	return text.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^[ \t]*\/\/.*$/gm, '');
+}
+
 /** Tables named after FROM or JOIN inside a `sql` template literal. */
 function rawSqlTableRefs(): { table: string; file: string }[] {
 	const refs: { table: string; file: string }[] = [];
 	for (const file of tsFilesUnder(SERVER_DIR)) {
-		const text = readFileSync(file, 'utf8');
+		const text = withoutComments(readFileSync(file, 'utf8'));
 		for (const template of text.matchAll(/sql`([^`]*)`/gs)) {
-			for (const ref of template[1].matchAll(/\b(?:FROM|JOIN)\s+`?([a-z_][a-z0-9_]*)`?/gi)) {
+			// Both quoting styles: drizzle emits `"user"`, and hand-written fragments
+			// use bare names or backticks. A regex that missed one would give a
+			// false pass on exactly the kind of literal this exists to catch.
+			for (const ref of template[1].matchAll(/\b(?:FROM|JOIN)\s+["`]?([a-z_][a-z0-9_]*)["`]?/gi)) {
 				refs.push({ table: ref[1].toLowerCase(), file: file.slice(process.cwd().length + 1) });
 			}
 		}

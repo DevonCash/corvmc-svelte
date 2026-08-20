@@ -67,36 +67,35 @@
 
 <PageContent>
 	{#await allRows then all}
-		<div class="mb-4 overflow-x-auto pb-1">
-			<TabBar
-				class="w-max"
-				tabs={[
-					{
-						key: 'current',
-						label: stateLabels.current,
-						badge: all.filter((r) => r.state === 'current').length
-					},
-					{
-						key: 'expiring',
-						label: stateLabels.expiring,
-						badge: all.filter((r) => r.state === 'expiring').length
-					},
-					{
-						key: 'expired',
-						label: stateLabels.expired,
-						badge: all.filter((r) => r.state === 'expired').length
-					},
-					{
-						key: 'revoked',
-						label: stateLabels.revoked,
-						badge: all.filter((r) => r.state === 'revoked').length
-					},
-					{ key: 'all', label: 'All', badge: all.length }
-				]}
-				active={stateView}
-				onchange={(key) => (stateView = key as StateView)}
-			/>
-		</div>
+		<TabBar
+			class="mb-4"
+			collapse
+			tabs={[
+				{
+					key: 'current',
+					label: stateLabels.current,
+					badge: all.filter((r) => r.state === 'current').length
+				},
+				{
+					key: 'expiring',
+					label: stateLabels.expiring,
+					badge: all.filter((r) => r.state === 'expiring').length
+				},
+				{
+					key: 'expired',
+					label: stateLabels.expired,
+					badge: all.filter((r) => r.state === 'expired').length
+				},
+				{
+					key: 'revoked',
+					label: stateLabels.revoked,
+					badge: all.filter((r) => r.state === 'revoked').length
+				},
+				{ key: 'all', label: 'All', badge: all.length }
+			]}
+			active={stateView}
+			onchange={(key) => (stateView = key as StateView)}
+		/>
 	{/await}
 
 	<FilterBar activeCount={certFilter ? 1 : 0} onclear={() => (certFilter = '')}>

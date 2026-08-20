@@ -19,6 +19,7 @@
 	import ThreadHeader from '$lib/components/inbox/ThreadHeader.svelte';
 	import ThreadStatusActions from '$lib/components/inbox/ThreadStatusActions.svelte';
 	import { channelIcon, channelLabel } from '$lib/components/inbox/channels';
+	import { threadDisplayStatus } from '$lib/components/inbox/thread-status';
 	import { isAlwaysEnabledChannel } from '$lib/config';
 	import { formatDateTime } from '$lib/utils/format';
 	import {
@@ -26,6 +27,7 @@
 		replyToThread,
 		addThreadNote,
 		updateThreadStatus,
+		setThreadAwaiting,
 		assignThread,
 		getInboxEnabledChannels,
 		getAssignableStaff
@@ -51,6 +53,7 @@
 	const resolveForm = updateThreadStatus.for('resolve');
 	const reopenForm = updateThreadStatus.for('reopen');
 	const snoozeForm = updateThreadStatus;
+	const awaitingForm = setThreadAwaiting.for('awaiting');
 
 	const ChannelIcon = $derived(channelIcon(t.channel));
 
@@ -84,14 +87,16 @@
 	>
 		{#snippet subtitleIcon()}<ChannelIcon size={14} />{/snippet}
 		{#snippet actions()}
-			<StatusBadge status={t.status} label />
+			<StatusBadge status={threadDisplayStatus(t)} label />
 			<ThreadStatusActions
 				threadId={t.id}
 				status={t.status}
 				snoozedUntil={t.snoozedUntil}
+				awaitingReplySince={t.awaitingReplySince}
 				{resolveForm}
 				{reopenForm}
 				{snoozeForm}
+				{awaitingForm}
 			/>
 		{/snippet}
 
