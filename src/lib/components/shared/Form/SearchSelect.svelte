@@ -28,17 +28,26 @@
 
 	const results = $derived(query.length >= minChars ? await search(query) : []);
 
-	$effect(() => {
-		if (comboValue.length > 0) {
-			const id = comboValue[0];
-			const found = results.find((r) => r.id === id);
-			if (found) {
-				value = found;
-				query = '';
-				onselect?.(found);
-			}
-		}
-	});
+	/**
+	 * Commits the pick in the handler bits-ui calls, not in an `$effect`.
+	 *
+	 * An effect lands a tick *after* the click. Every caller posts the choice
+	 * through a hidden input, and a submit inside that tick sends an empty one —
+	 * which a remote form reads as a deliberate blank, not as "nothing picked".
+	 * The form then reports success having saved the opposite of what was
+	 * clicked. `e2e/messages.e2e.ts` had to work around the window; the event
+	 * picker in `e2e/volunteering.e2e.ts` failed on it outright.
+	 *
+	 * `onValueChange` covers the keyboard too — bits-ui selects on Enter without
+	 * dispatching a click, so an `onclick` on the item would not have.
+	 */
+	function commit(ids: string[]) {
+		const found = results.find((r) => r.id === ids[0]);
+		if (!found) return;
+		value = found;
+		query = '';
+		onselect?.(found);
+	}
 
 	function clear() {
 		value = null;
@@ -72,7 +81,12 @@
 	</div>
 {:else}
 	<svelte:boundary>
-		<Combobox.Root type="multiple" bind:value={comboValue} inputValue={query}>
+		<Combobox.Root
+			type="multiple"
+			bind:value={comboValue}
+			onValueChange={commit}
+			inputValue={query}
+		>
 			<div class="relative">
 				<Combobox.Input
 					{placeholder}
