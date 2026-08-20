@@ -221,6 +221,7 @@
 				{#snippet head()}
 					<th class="w-px"><span class="sr-only">Status</span></th>
 					<th>Reservation</th>
+					<th>Member</th>
 					<th class="col-support cell-num">Payment</th>
 					<th class="w-px"><span class="sr-only">Actions</span></th>
 				{/snippet}
@@ -231,7 +232,7 @@
 					{#if label !== prevLabel}
 						<tr>
 							<td
-								colspan="4"
+								colspan="5"
 								class="bg-base-200 px-4 py-2 text-subtle font-semibold tracking-wide uppercase"
 							>
 								{label}
@@ -246,50 +247,45 @@
 						</td>
 
 						<!--
-							Primary cell: the time is the ordering key, the member is its
-							closest qualifier. These were two columns; merging them is what
-							lets the row fit a phone without hiding the actions.
+							Primary cell: the time is the ordering key, and the booker — a
+							band, an event, a lesson — qualifies it. A member booking for
+							themselves is the ordinary case and leaves this cell one line.
 							The day is not repeated — the group header above carries it.
 						-->
 						<td class="cell-primary">
-							<a
-								{href}
-								class="flex items-center gap-1 font-medium whitespace-nowrap hover:underline"
-							>
-								{formatTimeRange(r.startsAt, r.endsAt)}
+							<!--
+								Both glyphs ride the time rather than taking a line of their own:
+								an event or lesson booking has no second line to sit on, and a
+								lone icon under the time reads as a dropped row.
+							-->
+							<div class="flex items-center gap-1">
+								<a {href} class="font-medium whitespace-nowrap hover:underline">
+									{formatTimeRange(r.startsAt, r.endsAt)}
+								</a>
 								{#if r.recurringSeriesId}
 									<span class="tooltip" data-tip="Recurring">
 										<IconRepeat size={14} class="text-base-content" />
 									</span>
 								{/if}
-							</a>
-							<div class="flex min-w-0 items-center gap-1">
 								{#if r.bookerType !== 'user'}
 									<span class="tooltip" data-tip={r.bookerType}>
 										<BookerTypeIcon type={r.bookerType} size={14} />
 									</span>
 								{/if}
-								{#if r.bookerType === 'band' && r.bandName}
-									<!--
-										The band owns the slot, so it is the subline; the member who
-										booked it is the qualifier after the middot.
-									-->
-									<a
-										href={resolve(`/staff/bands/${r.bandId}`)}
-										class="truncate font-medium hover:underline"
-									>
-										{r.bandName}
-									</a>
-									<span class="opacity-40">·</span>
-								{/if}
-								<!--
-									A mention inside the booking's subline, so a chip. No email:
-									the member is already the *subline* of this cell, and a third
-									line puts the row back over two.
-								-->
-								<EntityChip ref={r.member} icon={false} />
 							</div>
+							{#if r.bookerType === 'band' && r.bandName}
+								<!-- The band owns the slot, so it qualifies the time. Who booked
+								     it on the band's behalf is the Member column. -->
+								<a
+									href={resolve(`/staff/bands/${r.bandId}`)}
+									class="block truncate text-muted hover:underline"
+								>
+									{r.bandName}
+								</a>
+							{/if}
 						</td>
+
+						<td class="min-w-0"><EntityChip ref={r.member} icon={false} /></td>
 
 						<td class="col-support cell-num">
 							{#await hourlyRate then rate}

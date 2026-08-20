@@ -404,12 +404,12 @@ Props: `type` (`info`, `warning`, `error`, `success`), `href` (renders as `<a>` 
 Four ways to show one record, in `$lib/components/shared/entity/`. Every reference to a record in
 the staff and member panels should be one of them.
 
-| Tier   | Component                                  | Use                                                    |
-| ------ | ------------------------------------------ | ------------------------------------------------------ |
-| chip   | `EntityChip`                               | mentioning a record mid-sentence or in a `Fact`        |
-| row    | `EntityIdentity`                           | `size="sm"` is the table primary cell, `md` a list row |
-| card   | `EntityCard`                               | a related record on someone else's detail page         |
-| detail | `EntityIdentity size="lg"` + `RelatedList` | the identity strip and the related sections            |
+| Tier   | Component                                  | Use                                                                      |
+| ------ | ------------------------------------------ | ------------------------------------------------------------------------ |
+| chip   | `EntityChip`                               | mentioning a record mid-sentence, in a `Fact`, or in a column of its own |
+| row    | `EntityIdentity`                           | `size="sm"` is the table primary cell, `md` a list row                   |
+| card   | `EntityCard`                               | a related record on someone else's detail page                           |
+| detail | `EntityIdentity size="lg"` + `RelatedList` | the identity strip and the related sections                              |
 
 All of them take a single `ref: EntityRef` (`$lib/types/entity`) and nothing about presentation.
 
@@ -858,6 +858,15 @@ Every list row is built from the same four slots, in this order:
 cell, delete it and make it the subline — don't tier it. `EntityIdentity` already
 renders the email and the admin/staff/sustaining glyph, so a list showing a
 member never needs separate Email or role columns.
+
+**But another record is not a qualifier.** A fact about the row merges into the
+subline; a _different record_ the row points at — the member on a booking, the
+borrower on a loan — gets its own column with an `EntityChip` in it. Chips down a
+column scan as a column; the same chips scattered under each primary cell do not,
+and they cost the primary cell its second line. `staff/reservations`,
+`staff/equipment/loans` and `staff/recurring` all read this way. Reserve the
+subline for what genuinely qualifies the record: the band that owns a booked
+slot, an equipment loan's category, a series' time range.
 
 **Column budget:** 6 at ≥896px, 4 at ≥512px, 3 at 327px. Wanting a 7th means the
 fact belongs on the detail page.

@@ -67,6 +67,7 @@
 				{#snippet head()}
 					<th class="w-px"><span class="sr-only">Status</span></th>
 					<th>Series</th>
+					<th>Member</th>
 					<th class="col-support whitespace-nowrap">Starts</th>
 					<th class="w-px"><span class="sr-only">Actions</span></th>
 				{/snippet}
@@ -77,8 +78,9 @@
 						<td class="w-px">
 							<StatusBadge status={s.cancelledAt ? 'cancelled' : 'active'} />
 						</td>
-						<!-- Schedule is the identity of a series; the member and the time
-						     range are its qualifiers. Created dropped to the detail page. -->
+						<!-- Schedule is the identity of a series and the time range
+						     qualifies it; whose series it is gets its own column. Created
+						     dropped to the detail page. -->
 						<td class="cell-primary">
 							<a {href} class="flex min-w-0 items-center gap-1 font-medium hover:underline">
 								<IconRepeat size={14} class="shrink-0 opacity-60" />
@@ -86,16 +88,11 @@
 									{formatScheduleLabel(s.frequencyLabel, s.startsAt, s.monthlyMode)}
 								</span>
 							</a>
-							<div class="flex min-w-0 items-center gap-1 text-muted">
-								<!-- The series is the record here; the member is a mention
-								     inside its subline, which is the chip's job. -->
-								<EntityChip ref={s.member} icon={false} />
-								<span>·</span>
-								<span class="whitespace-nowrap">
-									{formatTimeRange(s.startsAt, s.endsAt)} · {formatDuration(s.startsAt, s.endsAt)}
-								</span>
+							<div class="truncate text-muted">
+								{formatTimeRange(s.startsAt, s.endsAt)} · {formatDuration(s.startsAt, s.endsAt)}
 							</div>
 						</td>
+						<td class="min-w-0"><EntityChip ref={s.member} icon={false} /></td>
 						<td class="col-support whitespace-nowrap">{formatDateShortYear(s.startsAt)}</td>
 						<td class="w-px">
 							{#if !s.cancelledAt}

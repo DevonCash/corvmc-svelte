@@ -78,6 +78,7 @@
 				{#snippet head()}
 					<th class="w-px"><span class="sr-only">Status</span></th>
 					<th>Loan</th>
+					<th>Member</th>
 					<th class="col-support whitespace-nowrap">Due</th>
 					<th class="col-extra whitespace-nowrap">Requested</th>
 					<th class="col-support cell-num">Charge</th>
@@ -94,13 +95,14 @@
 								{/if}
 							</div>
 						</td>
-						<!-- Equipment is what was borrowed; the member is its qualifier. -->
+						<!-- Equipment is what was borrowed; the borrower is a record of its
+						     own, so it gets a column rather than riding this cell's subline. -->
 						<td class="cell-primary">
 							<a {href} class="block truncate font-medium hover:underline">
 								{l.equipmentName ?? '(free-form request)'}
 							</a>
-							<div class="truncate text-muted"><EntityChip ref={l.member} icon={false} /></div>
 						</td>
+						<td class="min-w-0"><EntityChip ref={l.member} icon={false} /></td>
 						<td class="col-support whitespace-nowrap">
 							{l.dueDate ? formatDateShort(l.dueDate) : '—'}
 						</td>
