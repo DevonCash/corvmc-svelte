@@ -5,6 +5,7 @@
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import InfoCard from '$lib/components/shared/InfoCard.svelte';
+	import { EntityChip } from '$lib/components/shared/entity';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import Button from '$lib/components/shared/Button.svelte';
 	import Action from '$lib/components/shared/Action.svelte';
@@ -12,32 +13,17 @@
 	import DefinitionList from '$lib/components/shared/DefinitionList/DefinitionList.svelte';
 	import Fact from '$lib/components/shared/DefinitionList/Fact.svelte';
 	import { formatDateTime } from '$lib/utils/format';
+	import { entityLabels } from '$lib/config';
 	import ThreadTimeline from '$lib/components/inbox/ThreadTimeline.svelte';
-
-	const entityLabels: Record<string, string> = {
-		member_profile: 'Member profile',
-		band_profile: 'Band profile',
-		event: 'Event listing',
-		suggestion: 'Suggestion',
-		inbox_thread: 'Direct conversation'
-	};
 
 	let id = $derived(page.params.id!);
 	let flag = $derived(await getFlagDetail(id));
 
-	let entityHref = $derived(
-		flag.entityType === 'band_profile'
-			? resolve(`/staff/bands/${flag.entityId}`)
-			: flag.entityType === 'event'
-				? resolve(`/events/${flag.entityId}`)
-				: flag.entityType === 'suggestion'
-					? resolve(`/staff/suggestions/${flag.entityId}`)
-					: // A conversation has no staff page of its own — this report is the
-						// only way to see it, which is deliberate.
-						flag.entityType === 'inbox_thread'
-						? resolve(`/staff/flags/${flag.id}`)
-						: resolve(`/staff/users/${flag.entityId}`)
-	);
+	// `flag.entityHref` is the server's own answer, which this page used to
+	// recompute with a five-deep ternary beside it — two copies of one route
+	// table, already disagreeing about where a flagged event lives. The buttons
+	// below take it as-is; the chip derives its own from `flag.target`.
+	let entityHref = $derived(flag.entityHref);
 
 	// The timeline is drawn from the reporter's point of view: their messages sit
 	// on the right. Without this it falls back to inbound/outbound — the org's
@@ -63,10 +49,10 @@
 	<div class="grid gap-6 lg:grid-cols-2 mb-6">
 		<InfoCard title="Report">
 			<DefinitionList>
-				<Fact label="Type">{entityLabels[flag.entityType] ?? flag.entityType}</Fact>
+				<Fact label="Type">{entityLabels[flag.target.type].one}</Fact>
 
 				<Fact label="Content">
-					<a class="link" href={entityHref}>{flag.entityLabel}</a>
+					<EntityChip ref={flag.target} />
 				</Fact>
 
 				<Fact label="Reason">{flag.reason}</Fact>
@@ -128,10 +114,8 @@
 					{/if}
 
 					<Fact label="By">
-						{#if flag.eventContext.band}
-							<a class="link" href={resolve(`/directory/bands/${flag.eventContext.band.slug}`)}>
-								{flag.eventContext.band.name}
-							</a>
+						{#if flag.eventBandRef}
+							<EntityChip ref={flag.eventBandRef} />
 						{:else}
 							CMC
 						{/if}

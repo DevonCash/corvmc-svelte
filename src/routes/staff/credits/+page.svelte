@@ -7,7 +7,7 @@
 	import FilterBar from '$lib/components/shared/FilterBar.svelte';
 	import Select from '$lib/components/shared/Form/Select.svelte';
 	import Badge from '$lib/components/shared/Badge.svelte';
-	import MemberLink from '$lib/components/shared/MemberLink.svelte';
+	import { EntityIdentity } from '$lib/components/shared/entity';
 	import { getStaffCredits } from '$lib/remote/users.remote';
 	import { formatDateTimeShort, titleCase } from '$lib/utils/format';
 	import { creditSourceLabels } from '$lib/config';
@@ -136,13 +136,11 @@
 							reaches the page. Source remains a filter.
 						-->
 						<td class="cell-primary">
-							<MemberLink
-								variant="inline"
-								member={{ name: t.userName ?? '', email: undefined, userId: t.userId }}
-							/>
-							<span class="block truncate text-muted">
-								{t.description || sourceLabel(t.source)}
-							</span>
+							<EntityIdentity ref={t.member}>
+								{#snippet subtitle()}
+									{t.description || sourceLabel(t.source)}
+								{/snippet}
+							</EntityIdentity>
 						</td>
 						<td class="col-extra whitespace-nowrap">
 							<Badge size="sm" variant="ghost">

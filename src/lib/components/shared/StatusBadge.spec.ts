@@ -28,7 +28,7 @@ import { inviteStatuses } from '$lib/server/db/schema/platform-invite';
 const derivedStatuses = {
 	// campaign-service.ts `deriveCampaignStatus`
 	campaign: ['draft', 'scheduled', 'sending', 'sent'],
-	// MemberLink / band member roles
+	// Member subtypes / band member roles
 	bandRoles: ['owner', 'admin', 'member'],
 	// staff/bands/+page.svelte, and the shared ActivateToggleAction pages
 	activation: ['active', 'deactivated'],

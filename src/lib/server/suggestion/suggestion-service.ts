@@ -1,4 +1,5 @@
 import { db } from '$lib/server/db';
+import { memberRefColumns } from '$lib/server/entity/refs';
 import {
 	suggestion,
 	suggestionVote,
@@ -714,7 +715,10 @@ export async function listPendingEdits() {
 			proposedTitle: suggestionEdit.proposedTitle,
 			originalTitle: suggestionEdit.originalTitle,
 			createdAt: suggestionEdit.createdAt,
-			requestedByName: requester.name
+			requestedByName: requester.name,
+			// The `user` join is aliased here — one query, two people, if the
+			// suggestion's own author is ever added beside the requester.
+			requestedBy: memberRefColumns(requester)
 		})
 		.from(suggestionEdit)
 		.leftJoin(requester, eq(requester.id, suggestionEdit.requestedByUserId))

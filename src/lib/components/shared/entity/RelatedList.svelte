@@ -1,21 +1,23 @@
 <script lang="ts" generics="T">
+	import type { Snippet } from 'svelte';
+	import InfoCard from '../InfoCard.svelte';
+	import Alert from '../Alert.svelte';
+
 	/**
-	 * An InfoCard whose body is one remote query.
+	 * A titled card whose body is one remote query — the "related records"
+	 * section of a detail page.
 	 *
-	 * Every section of the staff user record loads independently — a slow
-	 * subscription lookup must not blank the reservations next to it — so each
-	 * one needs the same pending/error envelope. Without the `{:catch}` a failed
-	 * query renders an empty card, which is indistinguishable from "this member
-	 * has none of these"; that ambiguity is exactly what the Payment Records card
-	 * shipped with and had to be fixed.
+	 * Promoted from `staff/users/[id]/panels/AsyncCard.svelte`, which was already
+	 * exactly this component, privately, in one route folder.
+	 *
+	 * Each section loads independently: a slow subscription lookup must not blank
+	 * the reservations beside it. The `{:catch}` is load-bearing — without it a
+	 * failed query renders an empty card, indistinguishable from "this record has
+	 * none of these", which is the bug the Payment Records card shipped with.
 	 *
 	 * Empty states stay with the caller: "no bands" and "no payments" want
 	 * different words, and half of them want a link out.
 	 */
-	import type { Snippet } from 'svelte';
-	import InfoCard from '$lib/components/shared/InfoCard.svelte';
-	import Alert from '$lib/components/shared/Alert.svelte';
-
 	let {
 		title,
 		result,

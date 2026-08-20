@@ -527,3 +527,82 @@ export const suggestionStatusOptions = suggestionStatuses.map((value) => ({
 	value,
 	label: suggestionStatusLabels[value]
 }));
+
+// ---------------------------------------------------------------------------
+// Entity vocabulary
+// ---------------------------------------------------------------------------
+
+/**
+ * Every record type the app renders a reference to — a chip, a list row, a
+ * card, or a detail page.
+ *
+ * This is the client-side half of the entity presentation system. It lives in
+ * `config.ts` rather than beside the tables because `$lib/server` cannot be
+ * imported from the browser, and every one of these values is read by a
+ * `.svelte` file. The rendering half (icon, avatar shape) lives in
+ * `$lib/components/shared/entity/registry.ts`, which carries Svelte icon
+ * components and so cannot be imported by server code.
+ *
+ * Adding a value here without adding it to `entityKinds` fails
+ * `registry.spec.ts`.
+ */
+export const entityTypes = [
+	'member',
+	'band',
+	'event',
+	'reservation',
+	'suggestion',
+	'thread',
+	'flag',
+	'campaign',
+	'audience',
+	'equipment',
+	'loan',
+	'shift',
+	'role',
+	'recurring',
+	'help'
+] as const;
+export type EntityType = (typeof entityTypes)[number];
+
+/**
+ * What to call one, and what to call several.
+ *
+ * Domain-specific wording at a call site ("Waiting on DNS" rather than
+ * "Pending") stays at the call site — the same rule `StatusBadge` follows.
+ */
+export const entityLabels: Record<EntityType, { one: string; many: string }> = {
+	member: { one: 'Member', many: 'Members' },
+	band: { one: 'Band', many: 'Bands' },
+	event: { one: 'Event', many: 'Events' },
+	reservation: { one: 'Reservation', many: 'Reservations' },
+	suggestion: { one: 'Suggestion', many: 'Suggestions' },
+	thread: { one: 'Conversation', many: 'Conversations' },
+	flag: { one: 'Report', many: 'Reports' },
+	campaign: { one: 'Campaign', many: 'Campaigns' },
+	audience: { one: 'Audience', many: 'Audiences' },
+	equipment: { one: 'Equipment', many: 'Equipment' },
+	loan: { one: 'Loan', many: 'Loans' },
+	shift: { one: 'Shift', many: 'Shifts' },
+	role: { one: 'Volunteer role', many: 'Volunteer roles' },
+	recurring: { one: 'Recurring series', many: 'Recurring series' },
+	help: { one: 'Help article', many: 'Help articles' }
+};
+
+/**
+ * `contentFlag.entityType` has its own vocabulary, older and narrower than
+ * `entityTypes` — it names the *profile* rather than the record behind it.
+ * This is the bridge, and it is what lets a flag link to what it reports
+ * instead of re-deriving the route with a nested ternary.
+ *
+ * Keyed by string rather than `FlagEntityType` because that type lives in
+ * `$lib/server/db/schema/flag` and cannot be imported here.
+ * `registry.spec.ts` asserts every value of it is covered.
+ */
+export const flagEntityTypeToEntity: Record<string, EntityType> = {
+	member_profile: 'member',
+	band_profile: 'band',
+	event: 'event',
+	suggestion: 'suggestion',
+	inbox_thread: 'thread'
+};

@@ -1,8 +1,9 @@
 <script lang="ts">
 	import CardBody from '$lib/components/shared/Card/CardBody.svelte';
-	import { resolve } from '$app/paths';
 	import Badge from '$lib/components/shared/Badge.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
+	import { EntityIdentity } from '$lib/components/shared/entity';
+	import type { EntityRef } from '$lib/types/entity';
 	import Action from '$lib/components/shared/Action.svelte';
 	import Form from '$lib/components/shared/Form/Form.svelte';
 	import FormField from '$lib/components/shared/Form/FormField.svelte';
@@ -21,7 +22,7 @@
 	}: {
 		suggestion: {
 			id: string;
-			title: string;
+			ref: EntityRef;
 			body: string;
 			category: string;
 			status: string;
@@ -64,12 +65,7 @@
 					{suggestionCategoryLabels[suggestion.category as keyof typeof suggestionCategoryLabels] ??
 						suggestion.category}
 				</Badge>
-				<a
-					href={resolve(`/member/suggestions/${suggestion.id}`)}
-					class="truncate font-medium hover:underline"
-				>
-					{suggestion.title}
-				</a>
+				<EntityIdentity ref={suggestion.ref} class="min-w-0" />
 				{#if suggestion.status !== 'open'}
 					<span class="shrink-0"><StatusBadge status={suggestion.status} label /></span>
 				{/if}

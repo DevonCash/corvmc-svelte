@@ -6,7 +6,7 @@ import { user } from '$lib/server/db/schema/authentication';
 import { reservation } from '$lib/server/db/schema/reservation';
 import { eq, and, ne, gt, sql, or, like, inArray, isNull, isNotNull, count } from 'drizzle-orm';
 import { paginate, type PaginationInput } from '$lib/server/db/paginate';
-import { primaryRoleFor } from '$lib/server/authorization';
+import { bandRefColumns, memberRefColumns, toBandRef, toMemberRef } from '$lib/server/entity/refs';
 import { generateSlug, ensureUniqueSlug } from '$lib/server/utils/slug';
 import { isReservedSlug } from '$lib/reserved-slugs';
 import { cancel as cancelReservation } from '$lib/server/reservation/reservation-service';
@@ -229,7 +229,7 @@ export async function listForUser(
 }
 
 export async function getMembers(bandId: string) {
-	return db
+	const rows = await db
 		.select({
 			id: bandMember.id,
 			userId: bandMember.userId,
@@ -238,10 +238,7 @@ export async function getMembers(bandId: string) {
 			status: bandMember.status,
 			invitedById: bandMember.invitedById,
 			createdAt: bandMember.createdAt,
-			userName: user.name,
-			userEmail: user.email,
-			userPronouns: user.pronouns,
-			userRole: primaryRoleFor(user.id)
+			member: memberRefColumns()
 		})
 		.from(bandMember)
 		.innerJoin(user, eq(user.id, bandMember.userId))
@@ -250,6 +247,15 @@ export async function getMembers(bandId: string) {
 			sql`case ${bandMember.role} when 'owner' then 0 when 'admin' then 1 else 2 end`,
 			user.name
 		);
+
+	return rows.map((row) => ({
+		...row,
+		// The position is what qualifies this person *in this band*, so it takes
+		// the subline where it exists and the email falls back to the member's own
+		// page. Both call sites used to print the email and the position on two
+		// separate lines, which is a third line on a two-line row.
+		member: { ...toMemberRef(row.member), subtitle: row.position ?? row.member.email }
+	}));
 }
 
 export async function searchMembers(query: string, bandId: string) {
@@ -585,7 +591,9 @@ export async function listAll(
 			name: band.name,
 			slug: band.slug,
 			ownerId: band.ownerId,
-			ownerName: user.name,
+			// Two records per row: the band the row is, and the member who owns it.
+			ref: bandRefColumns(),
+			owner: memberRefColumns(),
 			tier: band.tier,
 			memberCount: sql<number>`(
 				select count(*) from band_member bm
@@ -606,7 +614,11 @@ export async function listAll(
 		.innerJoin(user, eq(user.id, band.ownerId))
 		.where(where);
 
-	return paginate(dataQ, countQ, pagination);
+	const { rows, pagination: page } = await paginate(dataQ, countQ, pagination);
+	return {
+		rows: rows.map((r) => ({ ...r, ref: toBandRef(r.ref), owner: toMemberRef(r.owner) })),
+		pagination: page
+	};
 }
 
 export async function getByIdWithDetails(bandId: string) {
@@ -617,10 +629,7 @@ export async function getByIdWithDetails(bandId: string) {
 			slug: band.slug,
 			bio: band.bio,
 			ownerId: band.ownerId,
-			ownerName: user.name,
-			ownerEmail: user.email,
-			ownerPronouns: user.pronouns,
-			ownerRole: primaryRoleFor(user.id),
+			owner: memberRefColumns(),
 			avatarKey: band.avatarKey,
 			tier: band.tier,
 			subscription: band.subscription,
@@ -636,7 +645,7 @@ export async function getByIdWithDetails(bandId: string) {
 		.innerJoin(user, eq(user.id, band.ownerId))
 		.where(eq(band.id, bandId));
 
-	return row ?? null;
+	return row ? { ...row, owner: toMemberRef(row.owner) } : null;
 }
 
 export async function deactivate(bandId: string) {

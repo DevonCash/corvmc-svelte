@@ -12,6 +12,7 @@
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
+	import { EntityIdentity } from '$lib/components/shared/entity';
 	import Action from '$lib/components/shared/Action.svelte';
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
 	import Form from '$lib/components/shared/Form/Form.svelte';
@@ -313,11 +314,13 @@
 						/>
 					</td>
 					<td class="w-px"><StatusBadge status={a.published ? 'published' : 'draft'} /></td>
-					<!-- Category was its own column; it qualifies the title, so it is the
-					     subline. -->
+					<!-- Category was its own column; it qualifies the title, so it stays
+					     the subline — supplied here because the category names are loaded
+					     by a second query this page already makes. -->
 					<td class="cell-primary">
-						<a {href} class="block truncate font-medium hover:underline">{a.title}</a>
-						<div class="truncate text-muted">{categoryMap[a.categoryId] ?? '—'}</div>
+						<EntityIdentity ref={a.ref}>
+							{#snippet subtitle()}{categoryMap[a.categoryId] ?? '—'}{/snippet}
+						</EntityIdentity>
 					</td>
 					<td class="col-support w-px">
 						<Badge size="xs" variant={a.source === 'static' ? 'info' : 'ghost'}>{a.source}</Badge>

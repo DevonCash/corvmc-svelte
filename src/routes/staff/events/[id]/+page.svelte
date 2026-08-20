@@ -43,7 +43,7 @@
 	import { priceDisplay } from '$lib/utils/event-ticketing';
 	import Badge from '$lib/components/shared/Badge.svelte';
 	import Button from '$lib/components/shared/Button.svelte';
-	import { IconMusic } from '@tabler/icons-svelte';
+	import { EntityChip } from '$lib/components/shared/entity';
 	import { formatEventTimeRange } from '$lib/utils/event-time';
 	import Action from '$lib/components/shared/Action.svelte';
 	import Alert from '$lib/components/shared/Alert.svelte';
@@ -746,12 +746,9 @@
 	<InfoCard title="Event Details">
 		{#if evt.source === 'band'}
 			<p class="mb-2 flex items-center gap-2 text-sm">
-				<IconMusic size={16} />
 				Posted by
-				{#if data.band}
-					<a href={resolve(`/staff/bands/${data.band.id}`)} class="link font-medium">
-						{data.band.name}
-					</a>
+				{#if data.bandRef}
+					<EntityChip ref={data.bandRef} />
 				{:else}
 					<span class="font-medium">a band</span>
 				{/if}

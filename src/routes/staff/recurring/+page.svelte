@@ -4,7 +4,7 @@
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import DataList from '$lib/components/shared/DataList.svelte';
 	import Table from '$lib/components/shared/Table.svelte';
-	import MemberLink from '$lib/components/shared/MemberLink.svelte';
+	import { EntityChip } from '$lib/components/shared/entity';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import Action from '$lib/components/shared/Action.svelte';
 	import { rowLink } from '$lib/actions/row-link';
@@ -67,6 +67,7 @@
 				{#snippet head()}
 					<th class="w-px"><span class="sr-only">Status</span></th>
 					<th>Series</th>
+					<th>Booker</th>
 					<th class="col-support whitespace-nowrap">Starts</th>
 					<th class="w-px"><span class="sr-only">Actions</span></th>
 				{/snippet}
@@ -77,8 +78,9 @@
 						<td class="w-px">
 							<StatusBadge status={s.cancelledAt ? 'cancelled' : 'active'} />
 						</td>
-						<!-- Schedule is the identity of a series; the member and the time
-						     range are its qualifiers. Created dropped to the detail page. -->
+						<!-- Schedule is the identity of a series and the time range
+						     qualifies it; whose series it is gets its own column. Created
+						     dropped to the detail page. -->
 						<td class="cell-primary">
 							<a {href} class="flex min-w-0 items-center gap-1 font-medium hover:underline">
 								<IconRepeat size={14} class="shrink-0 opacity-60" />
@@ -86,17 +88,13 @@
 									{formatScheduleLabel(s.frequencyLabel, s.startsAt, s.monthlyMode)}
 								</span>
 							</a>
-							<div class="flex min-w-0 items-center gap-1 text-muted">
-								<MemberLink
-									variant="inline"
-									member={{ name: s.userName, pronouns: s.userPronouns, role: s.userRole }}
-								/>
-								<span>·</span>
-								<span class="whitespace-nowrap">
-									{formatTimeRange(s.startsAt, s.endsAt)} · {formatDuration(s.startsAt, s.endsAt)}
-								</span>
+							<div class="truncate text-muted">
+								{formatTimeRange(s.startsAt, s.endsAt)} · {formatDuration(s.startsAt, s.endsAt)}
 							</div>
 						</td>
+						<!-- Member, band or event, exactly as on the bookings the series
+						     generates — the chip's glyph is what says which. -->
+						<td class="min-w-0"><EntityChip ref={s.booker} /></td>
 						<td class="col-support whitespace-nowrap">{formatDateShortYear(s.startsAt)}</td>
 						<td class="w-px">
 							{#if !s.cancelledAt}

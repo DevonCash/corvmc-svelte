@@ -14,7 +14,6 @@
 		RefundReservationAction
 	} from '$lib/components/shared/actions';
 	import DayTimeline from '$lib/components/shared/reservations/DayTimeline.svelte';
-	import BookerTypeIcon from '$lib/components/shared/reservations/BookerTypeIcon.svelte';
 	import RecordNav from '$lib/components/shared/RecordNav.svelte';
 	import CopyableId from '$lib/components/shared/CopyableId.svelte';
 	import InfoCard from '$lib/components/shared/InfoCard.svelte';
@@ -24,9 +23,8 @@
 		durationHours as calcDurationHours,
 		formatCents
 	} from '$lib/utils/format';
-	import Avatar from '$lib/components/shared/Avatar.svelte';
+	import { EntityChip, EntityIdentity } from '$lib/components/shared/entity';
 	import Button from '$lib/components/shared/Button.svelte';
-	import { IconMail, IconPhone } from '@tabler/icons-svelte';
 	import {
 		visibleActions,
 		reservationPaymentState,
@@ -174,41 +172,19 @@
 				</header>
 			{/snippet}
 			<div class="flex flex-col items-center">
-				{#if r.bookerType === 'band' && r.bandName}
-					<div class="mb-3 flex items-center gap-2">
-						<BookerTypeIcon type="band" size={18} />
-						<span class="text-lg font-medium">{r.bandName}</span>
-					</div>
-					<p class="mb-2 text-subtle tracking-wide uppercase">Booked by</p>
-				{:else if r.bookerType === 'event'}
+				{#if r.booker.type !== 'member'}
 					<!--
-						The show leads, as the band does for a band booking. Unlike the list
-						row, the detail page has room to keep the staff account that raised
-						the hold — that is the audit trail for it.
+						Whatever the room is held for leads — a band or a show — and its
+						glyph comes with the chip rather than from a booker-type icon beside
+						it. "Booked by" then keeps the account that raised the hold, which
+						is the audit trail for it.
 					-->
-					<div class="mb-3 flex items-center gap-2">
-						<BookerTypeIcon type="event" size={18} />
-						<span class="text-lg font-medium">{r.eventTitle ?? 'Event'}</span>
-					</div>
+					<div class="mb-3"><EntityChip ref={r.booker} /></div>
 					<p class="mb-2 text-subtle tracking-wide uppercase">Booked by</p>
 				{/if}
-				<Avatar src={r.memberImage ?? undefined} name={r.memberName} class="size-16 mb-4" />
-				<h3 class="text-lg">{r.memberName}</h3>
-				{#if r.memberPronouns}
-					<p class="text-xs text-muted">{r.memberPronouns}</p>
-				{/if}
-				<div class="join join-vertical mt-4">
-					<Button href="mailto:{r.memberEmail}" variant="default" outline class="join-item">
-						<IconMail class="size-5" />
-						{r.memberEmail}
-					</Button>
-					{#if r.memberPhone}
-						<Button href="tel:{r.memberPhone}" variant="default" outline class="join-item">
-							<IconPhone class="size-5" />
-							{r.memberPhone}
-						</Button>
-					{/if}
-				</div>
+				<!-- `link`, unlike a detail page's own strip: the record here is the
+				     booking, and the member is a different record with its own page. -->
+				<EntityIdentity ref={r.member} size="lg" link email={r.memberEmail} phone={r.memberPhone} />
 			</div>
 		</InfoCard>
 

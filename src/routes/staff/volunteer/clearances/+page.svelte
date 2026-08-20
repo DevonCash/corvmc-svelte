@@ -8,7 +8,7 @@
 	import TabBar from '$lib/components/shared/TabBar.svelte';
 	import FilterBar from '$lib/components/shared/FilterBar.svelte';
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
-	import MemberLink from '$lib/components/shared/MemberLink.svelte';
+	import { EntityIdentity } from '$lib/components/shared/entity';
 	import Select from '$lib/components/shared/Form/Select.svelte';
 	import { formatDateShortYear } from '$lib/utils/format';
 	import { CERT_EXPIRY_WARNING_DAYS } from '$lib/config';
@@ -140,16 +140,7 @@
 							<span class="badge badge-sm {badgeClass[row.state]}">{row.state}</span>
 						</td>
 						<td class="whitespace-nowrap">
-							<MemberLink
-								variant="inline"
-								member={{
-									name: row.userName,
-									email: row.userEmail,
-									pronouns: null,
-									role: null,
-									userId: row.userId
-								}}
-							/>
+							<EntityIdentity ref={row.member} />
 						</td>
 						<td class="col-support cell-primary">{row.certificationName}</td>
 						<td class="col-support whitespace-nowrap">{formatDateShortYear(row.grantedAt)}</td>

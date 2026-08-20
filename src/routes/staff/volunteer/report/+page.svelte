@@ -10,7 +10,7 @@
 	import DataList from '$lib/components/shared/DataList.svelte';
 	import Table from '$lib/components/shared/Table.svelte';
 	import FilterBar from '$lib/components/shared/FilterBar.svelte';
-	import MemberLink from '$lib/components/shared/MemberLink.svelte';
+	import { EntityIdentity } from '$lib/components/shared/entity';
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
 	import { formatDateShortYear } from '$lib/utils/format';
 	import { formatVolunteerHours } from '$lib/config';
@@ -196,10 +196,7 @@
 					{#each members as m (m.userId)}
 						<tr class="hover">
 							<td class="cell-primary">
-								<MemberLink
-									variant="inline"
-									member={{ name: m.userName, email: m.userEmail, userId: m.userId }}
-								/>
+								<EntityIdentity ref={m.member} />
 							</td>
 							<td class="cell-num">{formatVolunteerHours(m.minutes)}</td>
 							<td class="col-support cell-num">{m.logCount}</td>

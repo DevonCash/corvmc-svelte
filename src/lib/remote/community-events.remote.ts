@@ -21,6 +21,7 @@ import {
 	rejectSubmission
 } from '$lib/server/event/community-event-service';
 import { getById, getEventLineup } from '$lib/server/event/event-service';
+import { toEventRef } from '$lib/server/entity/refs';
 import { searchBandsByName } from '$lib/server/band/band-service';
 import { communityEventSchema, lineupSchema } from '$lib/server/db/schema/event';
 import { buildDateInTz, buildTimeRangeInTz } from '$lib/server/reservation/timezone';
@@ -388,5 +389,11 @@ export const getUserListings = query(z.string(), async (userId) => {
 		listRejectedForUser(userId),
 		countPublishedListingsBy(userId)
 	]);
-	return { listings, rejected, publishedCount };
+	// The listing's own review state is the row's status and stays in its
+	// column; the ref is the event the listing is for.
+	const withRef = (e: (typeof listings)[number]) => ({
+		...e,
+		ref: toEventRef({ id: e.id, title: e.title, startsAt: e.startsAt })
+	});
+	return { listings: listings.map(withRef), rejected: rejected.map(withRef), publishedCount };
 });

@@ -7,19 +7,13 @@
 	import FilterBar from '$lib/components/shared/FilterBar.svelte';
 	import Select from '$lib/components/shared/Form/Select.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
+	import { EntityIdentity } from '$lib/components/shared/entity';
+	import { entityLabels } from '$lib/config';
 	import Badge from '$lib/components/shared/Badge.svelte';
-	import { resolve } from '$app/paths';
 	import { relativeDay } from '$lib/utils/format';
 	import { getFlagsQueue } from '$lib/remote/flags.remote';
 
 	const flagStatuses = ['pending', 'resolved', 'dismissed'] as const;
-
-	const entityLabels: Record<string, string> = {
-		member_profile: 'Member',
-		band_profile: 'Band',
-		event: 'Event',
-		suggestion: 'Suggestion'
-	};
 
 	// `searchText`, not `search`: FilterBar's always-visible slot is a snippet
 	// named `search`, and a snippet shadows a same-named script binding.
@@ -92,14 +86,9 @@
 							     the status badge and the timestamp onto ragged extra lines. -->
 							<div class="flex min-w-0 items-center gap-2">
 								<Badge size="sm" variant="outline" class="shrink-0">
-									{entityLabels[f.entityType] ?? f.entityType}
+									{entityLabels[f.target.type].one}
 								</Badge>
-								<a
-									href={resolve(`/staff/flags/${f.id}`)}
-									class="truncate font-medium hover:underline"
-								>
-									{f.entityLabel}
-								</a>
+								<EntityIdentity ref={f.ref} class="min-w-0" />
 								<span class="shrink-0"><StatusBadge status={f.status} label /></span>
 							</div>
 							<p class="text-sm">{f.reason}</p>

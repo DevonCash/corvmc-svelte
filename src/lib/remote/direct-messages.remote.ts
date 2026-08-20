@@ -56,6 +56,10 @@ export const getMyMessages = query(
 	z.object({ page: z.coerce.number().int().min(1).optional() }).optional(),
 	async (args) => {
 		const user = requireUser();
+		// No entity ref here, unlike every other list: #234 made this a two-pane
+		// inbox whose whole row is the anchor, with an active state and a channel
+		// icon. An identity's own link inside that row would be an anchor inside an
+		// anchor, so `ConversationList` owns its markup and the tier stays out.
 		return listMemberConversations(user.id, { page: args?.page ?? 1, pageSize: 25 });
 	}
 );

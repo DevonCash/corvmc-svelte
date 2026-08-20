@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { getMemberStandings } from '$lib/remote/standing.remote';
 	import { getFlagsAgainstUser, getFlagsByUser } from '$lib/remote/flags.remote';
-	import AsyncCard from './AsyncCard.svelte';
+	import { RelatedList } from '$lib/components/shared/entity';
 	import InfoCard from '$lib/components/shared/InfoCard.svelte';
 	import Table from '$lib/components/shared/Table.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
@@ -69,7 +69,7 @@
 	{/each}
 {/await}
 
-<AsyncCard title="Reports against this member" result={getFlagsAgainstUser(id)}>
+<RelatedList title="Reports against this member" result={getFlagsAgainstUser(id)}>
 	{#snippet children(flags)}
 		{#if flags.length === 0}
 			<EmptyState title="No reports" description="Nobody has reported this member's profile." />
@@ -93,9 +93,9 @@
 			</Table>
 		{/if}
 	{/snippet}
-</AsyncCard>
+</RelatedList>
 
-<AsyncCard title="Reports they filed" result={getFlagsByUser(id)}>
+<RelatedList title="Reports they filed" result={getFlagsByUser(id)}>
 	{#snippet children(flags)}
 		{#if flags.length === 0}
 			<EmptyState title="None filed" description="This member has not reported anyone." />
@@ -119,4 +119,4 @@
 			</Table>
 		{/if}
 	{/snippet}
-</AsyncCard>
+</RelatedList>

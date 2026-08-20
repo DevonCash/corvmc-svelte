@@ -10,7 +10,7 @@
 		revokeCertification
 	} from '$lib/remote/volunteer.remote';
 	import { getUserOverview } from '$lib/remote/users.remote';
-	import AsyncCard from './AsyncCard.svelte';
+	import { RelatedList } from '$lib/components/shared/entity';
 	import InfoCard from '$lib/components/shared/InfoCard.svelte';
 	import Table from '$lib/components/shared/Table.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
@@ -37,7 +37,7 @@
 	}
 </script>
 
-<AsyncCard title="Volunteer profile" result={getUserVolunteerProfile(id)}>
+<RelatedList title="Volunteer profile" result={getUserVolunteerProfile(id)}>
 	{#snippet children(data)}
 		{#if !data.profile}
 			<EmptyState
@@ -80,7 +80,7 @@
 			</DefinitionList>
 		{/if}
 	{/snippet}
-</AsyncCard>
+</RelatedList>
 
 <!--
 	Clearances. Revoke rather than delete is the normal way to end one: the
@@ -197,7 +197,7 @@
 	</InfoCard>
 {/await}
 
-<AsyncCard title="Shifts" result={getUserShifts(id)}>
+<RelatedList title="Shifts" result={getUserShifts(id)}>
 	{#snippet children(shifts)}
 		{#if shifts.length === 0}
 			<EmptyState
@@ -228,9 +228,9 @@
 			</Table>
 		{/if}
 	{/snippet}
-</AsyncCard>
+</RelatedList>
 
-<AsyncCard title="Hour logs" result={getUserHourLogs(id)}>
+<RelatedList title="Hour logs" result={getUserHourLogs(id)}>
 	{#snippet children(logs)}
 		{#if logs.length === 0}
 			<EmptyState title="No hours logged" description="This member has never submitted hours." />
@@ -259,4 +259,4 @@
 			</Table>
 		{/if}
 	{/snippet}
-</AsyncCard>
+</RelatedList>

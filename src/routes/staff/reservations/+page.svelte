@@ -17,7 +17,7 @@
 	} from '$lib/components/shared/actions';
 	import ResolveModal from './ResolveModal.svelte';
 	import CreateReservation from './CreateModal.svelte';
-	import MemberLink from '$lib/components/shared/MemberLink.svelte';
+	import { EntityChip } from '$lib/components/shared/entity';
 	import TabBar from '$lib/components/shared/TabBar.svelte';
 	import {
 		IconCheck,
@@ -221,6 +221,7 @@
 				{#snippet head()}
 					<th class="w-px"><span class="sr-only">Status</span></th>
 					<th>Reservation</th>
+					<th>Booker</th>
 					<th class="col-support cell-num">Payment</th>
 					<th class="w-px"><span class="sr-only">Actions</span></th>
 				{/snippet}
@@ -231,7 +232,7 @@
 					{#if label !== prevLabel}
 						<tr>
 							<td
-								colspan="4"
+								colspan="5"
 								class="bg-base-200 px-4 py-2 text-subtle font-semibold tracking-wide uppercase"
 							>
 								{label}
@@ -246,80 +247,36 @@
 						</td>
 
 						<!--
-							Primary cell: the time is the ordering key, the member is its
-							closest qualifier. These were two columns; merging them is what
-							lets the row fit a phone without hiding the actions.
+							Primary cell: the time is the ordering key, and the booker — a
+							band, an event, a lesson — qualifies it. A member booking for
+							themselves is the ordinary case and leaves this cell one line.
 							The day is not repeated — the group header above carries it.
 						-->
 						<td class="cell-primary">
-							<a
-								{href}
-								class="flex items-center gap-1 font-medium whitespace-nowrap hover:underline"
-							>
-								{formatTimeRange(r.startsAt, r.endsAt)}
+							<div class="flex items-center gap-1">
+								<a {href} class="font-medium whitespace-nowrap hover:underline">
+									{formatTimeRange(r.startsAt, r.endsAt)}
+								</a>
 								{#if r.recurringSeriesId}
 									<span class="tooltip" data-tip="Recurring">
 										<IconRepeat size={14} class="text-base-content" />
 									</span>
 								{/if}
-							</a>
-							<div class="flex min-w-0 items-center gap-1">
-								{#if r.bookerType !== 'user'}
-									<span class="tooltip" data-tip={r.bookerType}>
+								{#if r.bookerType === 'lesson'}
+									<!--
+										The one booker type with no record to point at, so the chip
+										beside it cannot say what this is. Every other type reads
+										off its own glyph in the Booker column.
+									-->
+									<span class="tooltip" data-tip="lesson">
 										<BookerTypeIcon type={r.bookerType} size={14} />
 									</span>
 								{/if}
-								{#if r.bookerType === 'event'}
-									<!--
-										The show is what this hold is *for*. The staff account that
-										clicked "Reserve practice space" is an audit detail, and
-										linking to it led away from the only page that explains the
-										booking — so the event replaces the member here.
-									-->
-									{#if r.eventId}
-										<a
-											href={resolve(`/staff/events/${r.eventId}`)}
-											class="truncate font-medium hover:underline"
-										>
-											{r.eventTitle}
-										</a>
-									{:else}
-										<!-- Event deleted out from under a stale hold: name it, don't link it. -->
-										<span class="truncate text-muted">Event</span>
-									{/if}
-								{:else}
-									{#if r.bookerType === 'band' && r.bandName}
-										<!--
-											The band owns the slot, so it is the subline; the member who
-											booked it is the qualifier after the middot.
-										-->
-										<a
-											href={resolve(`/staff/bands/${r.bandId}`)}
-											class="truncate font-medium hover:underline"
-										>
-											{r.bandName}
-										</a>
-										<span class="opacity-40">·</span>
-									{/if}
-									<!--
-										No email: the member is already the *subline* of this cell,
-										and a third line puts the row back over two. The email is one
-										click away on the reservation detail page.
-									-->
-									<MemberLink
-										variant="inline"
-										hideAvatar
-										member={{
-											name: r.memberName,
-											pronouns: r.memberPronouns,
-											role: r.memberRole,
-											sustaining: !!r.memberSustaining,
-											userId: r.createdByUserId
-										}}
-									/>
-								{/if}
 							</div>
 						</td>
+
+						<!-- Member, band or event — the chip's glyph is what says which. -->
+						<td class="min-w-0"><EntityChip ref={r.booker} /></td>
 
 						<td class="col-support cell-num">
 							{#await hourlyRate then rate}

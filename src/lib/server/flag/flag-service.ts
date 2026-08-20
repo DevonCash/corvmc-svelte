@@ -1,4 +1,5 @@
 import { db } from '$lib/server/db';
+import { toBandRef, toFlagTargetRef } from '$lib/server/entity/refs';
 import { DomainError } from '../domain-error';
 import { contentFlag } from '$lib/server/db/schema/flag';
 import type { FlagEntityType, FlagStatus } from '$lib/server/db/schema/flag';
@@ -417,11 +418,19 @@ export async function listFlags(filters: FlagFilters, pagination: PaginationInpu
 	}
 
 	return {
-		rows: rows.map((r) => ({
-			...r,
-			entityLabel: labelMap.get(`${r.entityType}:${r.entityId}`) ?? '(deleted)',
-			entityHref: entityHref(r.entityType, r.entityId, r.id)
-		})),
+		rows: rows.map((r) => {
+			const label = labelMap.get(`${r.entityType}:${r.entityId}`) ?? null;
+			return {
+				...r,
+				entityLabel: label ?? '(deleted)',
+				entityHref: entityHref(r.entityType, r.entityId, r.id),
+				// The queue row *is* the report, and it opens the report — so the
+				// row's own identity is the flag, titled by what was reported. The
+				// target rides along for the type badge beside it.
+				ref: { type: 'flag' as const, id: r.id, title: label ?? '(deleted)' },
+				target: toFlagTargetRef(r.entityType, r.entityId, label)
+			};
+		}),
 		pagination: pageInfo
 	};
 }
@@ -624,7 +633,13 @@ export async function getFlag(flagId: string) {
 		reportedByEmail: row.reportedByEmail,
 		entityLabel: entityLabel ?? '(deleted)',
 		entityHref: entityHref(row.flag.entityType, row.flag.entityId, flagId),
+		/** The reported record itself, so the page stops rebuilding its route. */
+		target: toFlagTargetRef(row.flag.entityType, row.flag.entityId, entityLabel),
 		eventContext,
+		// The credited band as a record. The flagged *target* is still resolved by
+		// the page's own href map — that is the polymorphic case, and it is the
+		// next thing to fold onto a ref.
+		eventBandRef: eventContext?.band ? toBandRef(eventContext.band) : null,
 		threadContext
 	};
 }

@@ -9,7 +9,7 @@
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import PaymentMethodIcon from '$lib/components/shared/PaymentMethodIcon.svelte';
 	import CopyableId from '$lib/components/shared/CopyableId.svelte';
-	import MemberLink from '$lib/components/shared/MemberLink.svelte';
+	import { EntityIdentity } from '$lib/components/shared/entity';
 	import Button from '$lib/components/shared/Button.svelte';
 	import { getStaffPayments } from '$lib/remote/users.remote';
 	import { formatDateTimeShort, formatCents } from '$lib/utils/format';
@@ -133,10 +133,7 @@
 					<tr class="hover">
 						<td class="w-px"><StatusBadge status={p.status} /></td>
 						<td class="cell-primary">
-							<MemberLink
-								variant="inline"
-								member={{ name: p.userName ?? '', email: p.userEmail, userId: p.userId }}
-							/>
+							<EntityIdentity ref={p.member} />
 						</td>
 						<td class="cell-num font-medium">{formatCents(p.amountCents)}</td>
 						<td class="col-support w-px">

@@ -228,6 +228,25 @@ never opened — on the one control whose whole job was to answer "why can't I d
 `Button` now falls back to a native `title` attribute whenever it is disabled. Worth knowing before
 adding any other prop that quietly changes what an attribute means.
 
+### Phase 7 notes
+
+Four components in `shared/entity/` (`EntityChip`, `EntityIdentity`, `EntityCard`, `RelatedList`)
+and one server projection (`server/entity/refs.ts`) replaced the per-page spelling of "show a
+record": a `<a class="block truncate font-medium hover:underline">` over a muted `<div>`, repeated
+about ninety times, each deciding its own link.
+
+The token count understates it, because the win is not mainly tokens. `entityHref` derives one
+canonical route per record _per viewer_, which closed a class of bug the census cannot see — band
+links written by hand pointed at `/staff/bands/[id]` in three places and `/directory/bands/[slug]`
+in three others, so a staff reader was sent to a public profile of a record whose staff page was one
+click away. Three staff queries read a member's role but not their subscription, drawing sustaining
+members as ordinary ones. And `staff/flags/[id]` rebuilt five routes in a nested ternary beside the
+`entityHref` the server already handed it.
+
+What the tiers deliberately do not cover: `member/events/**` and `member/directory/**` keep their
+art-directed set (`PosterCard`, `VinylCard`, `IdCard`), and `member/reservations/ReservationCard`
+keeps its own card — see CHORES for the divergence that leaves.
+
 ## Progress
 
 | Phase                            | route tokens | inline `style=` | Δ                                      |
@@ -239,3 +258,4 @@ adding any other prop that quietly changes what an attribute means.
 | 4 — filter controls              | 6,324        | 81              | −219 tokens, plus 185 dead ones        |
 | 5 — marketing section vocabulary | 6,193        | 52              | −131 tokens, −29 inline styles         |
 | 6 — `no-utility-soup` lint rule  | 6,193        | 52              | 147 warnings left as the backlog       |
+| 7 — entity presentation tiers    | 6,041        | 52              | −152 tokens; 4 tiers, 1 projection     |

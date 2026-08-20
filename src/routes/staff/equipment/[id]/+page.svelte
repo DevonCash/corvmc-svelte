@@ -18,7 +18,7 @@
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import Badge from '$lib/components/shared/Badge.svelte';
 	import { ActivateToggleAction } from '$lib/components/shared/actions';
-	import MemberLink from '$lib/components/shared/MemberLink.svelte';
+	import { EntityIdentity } from '$lib/components/shared/entity';
 	import Table from '$lib/components/shared/Table.svelte';
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
 	import DefinitionList from '$lib/components/shared/DefinitionList/DefinitionList.svelte';
@@ -167,16 +167,7 @@
 							</div>
 						</td>
 						<td class="cell-primary">
-							<MemberLink
-								variant="inline"
-								member={{
-									name: loan.userName,
-									email: loan.userEmail,
-									pronouns: loan.userPronouns,
-									role: loan.userRole,
-									userId: loan.userId
-								}}
-							/>
+							<EntityIdentity ref={loan.member} />
 						</td>
 						<td class="col-support whitespace-nowrap">
 							{loan.dueDate ? formatDateShort(loan.dueDate) : '—'}

@@ -8,6 +8,7 @@
 	import TabBar from '$lib/components/shared/TabBar.svelte';
 	import Select from '$lib/components/shared/Form/Select.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
+	import { EntityChip, EntityIdentity } from '$lib/components/shared/entity';
 	import Badge from '$lib/components/shared/Badge.svelte';
 	import { rowLink } from '$lib/actions/row-link';
 	import { resolve } from '$app/paths';
@@ -149,6 +150,7 @@
 				{#snippet head()}
 					<th class="w-px"><span class="sr-only">Status</span></th>
 					<th>Suggestion</th>
+					<th>Author</th>
 					<th class="col-support w-px">Category</th>
 					<th class="col-support w-px cell-num">Votes</th>
 					<th class="col-extra whitespace-nowrap">Posted</th>
@@ -159,11 +161,9 @@
 						<td class="w-px">
 							<StatusBadge status={s.mergedIntoId ? 'merged' : s.status} />
 						</td>
-						<td class="cell-primary">
-							<a {href} class="block truncate font-medium hover:underline">{s.title}</a>
-							<div class="truncate text-muted">{s.authorName ?? 'A former member'}</div>
-						</td>
-						<td class="col-support w-px">
+						<td class="cell-primary"><EntityIdentity ref={s.ref} /></td>
+						<td class="min-w-0"><EntityChip ref={s.author} icon={false} /></td>
+						<td class="col-support w-px whitespace-nowrap">
 							<Badge size="xs" variant="ghost">
 								{suggestionCategoryLabels[s.category as keyof typeof suggestionCategoryLabels] ??
 									s.category}
@@ -186,6 +186,7 @@
 			{#snippet head()}
 				<th class="w-px"><span class="sr-only">Status</span></th>
 				<th>Proposed change</th>
+				<th>Requested by</th>
 				<th class="col-extra whitespace-nowrap">Requested</th>
 			{/snippet}
 			{#each pendingEdits as e (e.id)}
@@ -193,11 +194,11 @@
 				<tr class="hover cursor-pointer" use:rowLink={href}>
 					<td class="w-px"><StatusBadge status="pending_review" /></td>
 					<td class="cell-primary">
-						<a {href} class="block truncate font-medium hover:underline">{e.proposedTitle}</a>
-						<div class="truncate text-muted">
-							was "{e.originalTitle}" · {e.requestedByName ?? 'A former member'}
-						</div>
+						<EntityIdentity ref={e.ref}>
+							{#snippet subtitle()}was "{e.originalTitle}"{/snippet}
+						</EntityIdentity>
 					</td>
+					<td class="min-w-0"><EntityChip ref={e.requestedBy} icon={false} /></td>
 					<td class="col-extra whitespace-nowrap">{relativeDay(e.createdAt)}</td>
 				</tr>
 			{/each}
@@ -212,6 +213,7 @@
 					{#snippet head()}
 						<th class="w-px"><span class="sr-only">Status</span></th>
 						<th>Suggestion</th>
+						<th>Author</th>
 						<th class="col-support w-px cell-num">Votes</th>
 						<th class="col-extra whitespace-nowrap">Posted</th>
 					{/snippet}
@@ -219,10 +221,8 @@
 						{@const href = resolve(`/staff/suggestions/${s.id}`)}
 						<tr class="hover cursor-pointer" use:rowLink={href}>
 							<td class="w-px"><StatusBadge status="under_review" /></td>
-							<td class="cell-primary">
-								<a {href} class="block truncate font-medium hover:underline">{s.title}</a>
-								<div class="truncate text-muted">{s.authorName ?? 'A former member'}</div>
-							</td>
+							<td class="cell-primary"><EntityIdentity ref={s.ref} /></td>
+							<td class="min-w-0"><EntityChip ref={s.author} icon={false} /></td>
 							<td class="col-support w-px cell-num">{s.voteCount}</td>
 							<td class="col-extra whitespace-nowrap">{relativeDay(s.createdAt)}</td>
 						</tr>
