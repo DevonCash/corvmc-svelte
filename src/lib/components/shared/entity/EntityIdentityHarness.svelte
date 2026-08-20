@@ -14,7 +14,8 @@
 		userId = 'user-1',
 		bands = [],
 		size = 'sm',
-		avatar = undefined
+		avatar = undefined,
+		status = false
 	}: {
 		ref: EntityRef;
 		panel?: Panel;
@@ -23,6 +24,7 @@
 		bands?: { id: string }[];
 		size?: 'sm' | 'md';
 		avatar?: boolean;
+		status?: boolean;
 	} = $props();
 </script>
 
@@ -30,7 +32,7 @@
 	<table>
 		<tbody>
 			<tr>
-				<td class="cell-primary"><EntityIdentity {ref} {size} {avatar} /></td>
+				<td class="cell-primary"><EntityIdentity {ref} {size} {avatar} {status} /></td>
 			</tr>
 		</tbody>
 	</table>

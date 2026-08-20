@@ -416,14 +416,21 @@ All of them take a single `ref: EntityRef` (`$lib/types/entity`) and nothing abo
 `EntityIdentity` covers three of the four tiers because a table cell, a list row and the strip at
 the top of a record's own page are one object at three scales:
 
-| Size | Media                  | Title     | Status          | Links |
-| ---- | ---------------------- | --------- | --------------- | ----- |
-| `sm` | none                   | plain     | leading glyph   | yes   |
-| `md` | 40px avatar/glyph tile | plain     | rides the media | yes   |
-| `lg` | 64px avatar/glyph tile | `text-lg` | rides the media | no    |
+| Size | Media                      | Title     | Status             | Links |
+| ---- | -------------------------- | --------- | ------------------ | ----- |
+| `sm` | none, or `avatar` for 24px | plain     | only with `avatar` | yes   |
+| `md` | 40px avatar/glyph tile     | plain     | rides the media    | yes   |
+| `lg` | 64px avatar/glyph tile     | `text-lg` | rides the media    | no    |
 
 `sm` is the only structurally different one: it renders the anchor and subline as **two sibling
 roots with no wrapper**, because that is what `cell-primary` needs. The other two are a flex row.
+
+That is also why a bare `sm` cell draws **no status at all**, and passing `status` without `avatar`
+is silently a no-op: a status element would have to be a third sibling, and the wrapper needed to
+place it is the one thing this mode cannot have. A cell that must show status has two options —
+keep the status in its own `w-px` column, which is what ~30 staff tables already do, or pass
+`avatar` and let it ride the 24px avatar or glyph tile like every other size.
+`EntityIdentity.svelte.spec.ts` pins both.
 
 `lg` does not link by default — the record's own page is where you already are — and takes
 `email`/`phone` for its subline, because a detail strip wants to be actionable where a row wants to
@@ -511,8 +518,10 @@ out — which is the only reason the marker exists.
 One treatment, so the same record does not report its state one way in a list and another on a card.
 Where there is media — an avatar, a glyph tile, a poster — a noteworthy status draws a **ring in its
 tone plus the glyph in the corner**. Status becomes its own element only where there is nothing to
-ride: the labelled badge at `lg` with no media, the leading glyph in the bare `sm` cell, and a
-tinted trailing region on a chip.
+ride: the labelled badge at `lg` with no media, and a tinted trailing region on a chip.
+
+Where there is no media _and_ no room for an element — the bare `sm` cell — there is no status.
+Give it an `avatar` if it needs one; see the size table above.
 
 Ring, fill, border and hover-border all come from one `statusTone` record keyed by `StatusBadge`'s
 own `variants[...].color`, so a chip cannot end up with an error region and a neutral outline. Tone

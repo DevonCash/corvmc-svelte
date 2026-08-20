@@ -80,6 +80,37 @@ describe('EntityIdentity', () => {
 		expect(document.querySelector('td.cell-primary > a')?.textContent).toContain('Jane Doe');
 	});
 
+	/**
+	 * The bare cell has nowhere to put a status: it renders two sibling roots and
+	 * no wrapper (above), so a third sibling is the one thing this mode cannot
+	 * have. `status` is therefore a no-op here, and ui-patterns says so — these
+	 * two pin the pair, because the doc claimed a leading glyph for a while and
+	 * nothing checked that the component agreed.
+	 *
+	 * A cell that must show status keeps its own `w-px` column, or passes
+	 * `avatar` and lets the status ride it like every other size does.
+	 */
+	it('draws no status in a bare cell, even when asked for one', async () => {
+		render(Harness, {
+			ref: fakeRef('reservation', { id: 'r1', status: 'cancelled' }),
+			status: true
+		});
+		const cell = document.querySelector('td.cell-primary')!;
+		expect(Array.from(cell.children).map((el) => el.tagName.toLowerCase())).toEqual(['a', 'div']);
+		expect(cell.querySelector('[role="img"]')).toBeNull();
+	});
+
+	it('rides the media once the cell has an avatar', async () => {
+		render(Harness, {
+			ref: fakeRef('reservation', { id: 'r1', status: 'cancelled' }),
+			status: true,
+			avatar: true
+		});
+		expect(document.querySelector('td.cell-primary [role="img"]')?.getAttribute('aria-label')).toBe(
+			'Cancelled'
+		);
+	});
+
 	/** The md shape is a flex row, so a wrapper here is correct, not a bug. */
 	it('wraps in a flex row at size md, where the avatar needs one', async () => {
 		render(Harness, { ref: fakeRef('band', { id: 'b1', slug: 'vu' }), size: 'md' });
