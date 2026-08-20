@@ -51,8 +51,8 @@
 				</DefinitionList>
 			{/snippet}
 			{#snippet actions()}
-				<Button variant="ghost" size="sm">Message</Button>
-				<Button size="sm">View profile</Button>
+				<Button variant="error" size="xs" outline>Deactivate</Button>
+				<Button variant="primary" size="xs">Message</Button>
 			{/snippet}
 		</EntityCard>
 	</div>
@@ -140,3 +140,37 @@
 	</div>
 {/snippet}
 <Story name="Status — expected state vs needs attention" template={statuses} />
+
+<!--
+	Actions ride the bottom edge, half in and half out, the way the member
+	reservation cards do. `.btn` already carries the retro hard shadow, so
+	straddling the boundary is what makes them read as raised off the card.
+	`size="xs"` throughout — a full-size button swamps the edge it sits on.
+
+	The right-hand card is a poster, to check the treatment survives the taller
+	portrait shape.
+-->
+{#snippet withActions()}
+	<div class="grid max-w-3xl gap-6 sm:grid-cols-2">
+		<EntityCard ref={fakeRef('reservation', { id: 'r1', status: 'scheduled' })}>
+			{#snippet facts()}
+				<DefinitionList>
+					<Fact label="Booked by" value="Jane Doe" />
+					<Fact label="Room" value="Practice space" />
+				</DefinitionList>
+			{/snippet}
+			{#snippet actions()}
+				<Button variant="error" size="xs" outline>Cancel</Button>
+				<Button variant="primary" size="xs">Confirm</Button>
+			{/snippet}
+		</EntityCard>
+
+		<EntityCard ref={fakeRef('event', { id: 'e1', status: 'draft', image: POSTER })}>
+			{#snippet actions()}
+				<Button variant="error" size="xs" outline>Delete</Button>
+				<Button variant="primary" size="xs">Publish</Button>
+			{/snippet}
+		</EntityCard>
+	</div>
+{/snippet}
+<Story name="Actions on the card edge" template={withActions} />
