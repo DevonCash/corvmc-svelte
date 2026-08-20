@@ -60,13 +60,14 @@ import { resolveImageUrl } from '$lib/server/storage';
 import { db } from '$lib/server/db';
 import { reservation } from '$lib/server/db/schema/reservation';
 import { user } from '$lib/server/db/schema/authentication';
-import { eq, inArray } from 'drizzle-orm';
+import { eq, and, like, not, inArray, notInArray, sql } from 'drizzle-orm';
 import { event, createEventSchema, eventSources } from '$lib/server/db/schema/event';
 import { band } from '$lib/server/db/schema/band';
 import { isFeatureEnabled } from '$lib/server/feature-flags';
 import { randomUUID } from 'crypto';
 import { hasEventEnded } from '$lib/utils/event-time';
-import { DEFAULT_TIMEZONE, SHORT_TEXT_MAX } from '$lib/config';
+import { DEFAULT_TIMEZONE, SEARCH_LIMIT, SHORT_TEXT_MAX } from '$lib/config';
+import { formatDateShortYear } from '$lib/utils/format';
 
 // ---------------------------------------------------------------------------
 // Queries
@@ -429,6 +430,49 @@ export const getStaffEvents = query(
 		);
 	}
 );
+
+/**
+ * Staff: event lookup for anything that hangs off a show — today, the volunteer
+ * shift forms.
+ *
+ * Two departures from `listAll`, which is the other staff-facing event read:
+ *
+ *  - **Nearest-in-time first, not newest first.** A venue has five rows called
+ *    "Open Mic Night"; ordering by `startsAt` descending hands back the one
+ *    furthest in the future, which is never the one the staffer meant. Sorting
+ *    by distance from now puts next Thursday's ahead of next April's, and still
+ *    reaches backwards for a show that already happened.
+ *  - **Cancelled and rejected are excluded**, because you do not staff a show
+ *    that is not happening. `listAll` keeps them; it is an admin index, and
+ *    this is a picker.
+ *
+ * The community-draft exclusion is `listAll`'s and carries its reasoning: a
+ * draft listing is a member's private working copy, and a staffer browsing
+ * events has no business reading it.
+ */
+export const searchEvents = query(z.string(), async (q) => {
+	await requireStaff();
+	if (!q || q.length < 2) return [];
+
+	const pattern = `%${q}%`;
+	const rows = await db
+		.select({ id: event.id, title: event.title, startsAt: event.startsAt })
+		.from(event)
+		.where(
+			and(
+				like(event.title, pattern),
+				notInArray(event.status, ['cancelled', 'rejected']),
+				not(and(eq(event.source, 'community'), eq(event.status, 'draft'))!)
+			)
+		)
+		.orderBy(sql`abs(${event.startsAt} - unixepoch())`)
+		.limit(SEARCH_LIMIT);
+
+	// The date arrives as a string because SearchSelect renders its description
+	// field verbatim — and it is formatted here so it lands in club time rather
+	// than whatever timezone the staffer's laptop is set to.
+	return rows.map((e) => ({ id: e.id, title: e.title, when: formatDateShortYear(e.startsAt) }));
+});
 
 export const getStaffEventDetail = query(z.string(), async (id) => {
 	await requireStaff();

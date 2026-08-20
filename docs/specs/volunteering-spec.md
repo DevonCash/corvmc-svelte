@@ -326,6 +326,41 @@ The shape: a `volunteer_shift` row is a dated, time-bounded need for a
 member to shift with its own small lifecycle (`claimed → confirmed → completed`,
 plus `cancelled` and `no_show`).
 
+### Attaching a shift to a show
+
+`volunteer_shift.eventId` shipped with the table and then sat unreachable for a
+release: the column, the service and the remote form schema all carried it, but
+no form ever rendered a field for it, so every shift in production was
+unattached. It is reachable from three places now, chosen because they are the
+three moments the answer is actually known:
+
+- **The shift forms** (`/staff/volunteer/shifts`, and a role's own page) carry a
+  type-to-search event picker, on `searchEvents`. Blank is a legitimate answer —
+  work parties and gear-repair days are why the column is nullable.
+- **The shift detail page** has an Edit action, which is where a link is added or
+  removed after the fact. `updateShift` had been written and had no caller, so
+  until now a shift with the wrong time could only be cancelled and rebuilt,
+  dropping every claim on it.
+- **The staff event page** carries a Volunteer Shifts card: what is staffing this
+  show, needed-vs-claimed, and a Schedule action with the event already locked in
+  and the times prefilled from doors. This is the direction the work actually
+  runs — make the event, then staff it.
+
+Two decisions inside that are easy to reverse by accident:
+
+- **`searchEvents` orders by distance from now, not by newest.** A venue has five
+  rows called "Open Mic Night"; `desc(startsAt)` returns the one furthest in the
+  future, which is never the one the staffer meant. It also drops cancelled and
+  rejected events, which `listAll` keeps — that one is an admin index, this is a
+  picker, and you do not staff a show that is not happening.
+- **The picker's hidden input is rendered even when nothing is selected.**
+  `updateShift` writes `eventId` only when the key is present, so an absent field
+  means "untouched" and an empty one means "cleared". Emit the field only while
+  something is picked — which is what `SearchSelect`'s own `name` prop does — and
+  an event can be attached and then never removed, with the form reporting
+  success both times. Pinned by an e2e test that reads the row back, because the
+  page shows the stale value only after a reload.
+
 How it connects to Phase 1, all shipped:
 
 - `volunteer_hour_log.shiftId` is a real FK (set-null — deleting a shift must
