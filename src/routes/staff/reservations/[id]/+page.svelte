@@ -149,13 +149,21 @@
 
 	<!-- Member + Payment grid -->
 	<div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-		<!-- Member card — a band booking leads with the band, then who booked it -->
-		<InfoCard title={r.bookerType === 'band' ? 'Band Booking' : 'Member'}>
+		<!-- Member card — a band or event booking leads with it, then who booked it -->
+		<InfoCard
+			title={r.bookerType === 'band'
+				? 'Band Booking'
+				: r.bookerType === 'event'
+					? 'Event'
+					: 'Member'}
+		>
 			{#snippet header(title)}
 				<header class="flex justify-between">
 					<span class="card-title">{title}</span>
 					{#if r.bookerType === 'band' && r.bandId}
 						<Button href="/staff/bands/{r.bandId}" variant="default" size="sm">View Band</Button>
+					{:else if r.bookerType === 'event' && r.eventId}
+						<Button href="/staff/events/{r.eventId}" variant="default" size="sm">View Event</Button>
 					{:else if r.createdByUserId}
 						<Button href="/staff/users/{r.createdByUserId}" variant="default" size="sm"
 							>View Profile</Button
@@ -164,11 +172,15 @@
 				</header>
 			{/snippet}
 			<div class="flex flex-col items-center">
-				{#if r.band}
-					<!-- The band holds the slot, so it leads; its glyph comes with the
-					     chip rather than from a booker-type icon beside it. -->
-					<div class="mb-3"><EntityChip ref={r.band} /></div>
-					<p class="mb-2 text-xs tracking-wide uppercase opacity-50">Booked by</p>
+				{#if r.booker.type !== 'member'}
+					<!--
+						Whatever the room is held for leads — a band or a show — and its
+						glyph comes with the chip rather than from a booker-type icon beside
+						it. "Booked by" then keeps the account that raised the hold, which
+						is the audit trail for it.
+					-->
+					<div class="mb-3"><EntityChip ref={r.booker} /></div>
+					<p class="mb-2 text-subtle tracking-wide uppercase">Booked by</p>
 				{/if}
 				<!-- `link`, unlike a detail page's own strip: the record here is the
 				     booking, and the member is a different record with its own page. -->

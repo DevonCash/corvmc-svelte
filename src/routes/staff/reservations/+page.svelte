@@ -173,7 +173,7 @@
 		{#snippet search()}
 			<SearchInput
 				bind:value={searchText}
-				placeholder="Search member or band..."
+				placeholder="Search member, band, or event..."
 				onsearch={(q) => {
 					searchDebounced = q;
 					page = 1;

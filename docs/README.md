@@ -47,6 +47,8 @@ as reality — reconcile deliberately.
 | [production-workflow-spec.md](specs/production-workflow-spec.md)       | 📋     | CMC-produced shows: booking → run of show → settlement → close-out; venues, external acts. Reconciled with `groups-spec.md` |
 | [volunteering-spec.md](specs/volunteering-spec.md)                     | ✅     | Volunteer roles, member hour logging, staff approval queue, reporting; shifts + certifications designed, unbuilt            |
 | [member-standing-spec.md](specs/member-standing-spec.md)               | ✅     | Scoped `member_standing`: what an upheld report costs, per domain. Merges the three per-domain standing tables              |
+| [member-portal-chat-spec.md](specs/member-portal-chat-spec.md)         | ✅     | Member↔staff conversations as an inbox channel (`portal`); `inbox_participant`                                              |
+| [direct-messages-spec.md](specs/direct-messages-spec.md)               | ✅     | Member↔member DMs: request/accept consent, silent drops, blocks, reporting                                                  |
 
 ## plans
 
@@ -71,6 +73,7 @@ Sequenced build plans. Mostly historical now that the features have shipped — 
 | [overview.md](architecture/overview.md)                                           | ✅     | **Start here** — how the system is wired (remote functions, auth, event bus, D1, cron, config)       |
 | [operations-manual.md](architecture/operations-manual.md)                         | ✅     | Day-to-day production ops: deploys, migrations, secrets, integrations, cron, docs upkeep, monitoring |
 | [deployment-checklist.md](architecture/deployment-checklist.md)                   | ✅     | First-time prod deploy: D1, R2, secrets, webhooks, cron                                              |
+| [inbox-reply-setup.md](architecture/inbox-reply-setup.md)                         | ✅     | Threaded email replies to the staff inbox: MX, Postmark inbound, secrets, rollback, troubleshooting  |
 | [d1-migration-proposal.md](architecture/d1-migration-proposal.md)                 | ✅     | Postgres → Cloudflare D1 proposal                                                                    |
 | [universal-data-layer-proposal.md](architecture/universal-data-layer-proposal.md) | ✅     | API layer for SSR/SPA + kiosk parity (proposal)                                                      |
 | [product-config-kv-migration.md](architecture/product-config-kv-migration.md)     | ⚠️     | product_config → KV — migration pending user action                                                  |

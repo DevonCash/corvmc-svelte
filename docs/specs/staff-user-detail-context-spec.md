@@ -143,8 +143,8 @@ screens of scroll that fetches everything on every view.
 ### What changed
 
 - **Tabs, not one column.** A persistent identity header and scoreboard sit
-  above a `TabBar`: Overview · Space & Gear · Bands & Shows · Volunteering ·
-  Money · Comms · Account. Panels mount on first selection and stay mounted
+  above a `TabBar`: Overview · Space · Bands · Volunteer · Money · Comms ·
+  Moderation · Account. Panels mount on first selection and stay mounted
   (`SvelteSet` of visited keys + `class:hidden`), so a tab's queries run exactly
   once and switching away does not discard a half-typed edit — `Form`'s `guard`
   only fires on navigation, and a tab change is not one.
@@ -186,3 +186,60 @@ page-level `<Form remote={updateUser}>`. `Action` renders a bare `<Button>` →
 `BitsButton.Root` with no `type`, so inside a form every one of those triggers
 was `type=submit` and posted the profile edit on click. Removing the page-level
 form — the edit form is now one card in the Account panel — fixes it.
+
+---
+
+## Density pass (implemented)
+
+The tabbed record shipped saying the same things at four altitudes, and its tab
+bar did not survive contact with a phone.
+
+### What changed
+
+- **One identity block.** `PageHeader` took an optional `leading` snippet and
+  now carries the avatar, so the strip below it stopped restating the name. What
+  is left there is what the header cannot hold: the contact line, and the
+  member's bands as links.
+- **Programs is gone.** The twelve-tile grid on Overview was a table of contents
+  for a tab bar one row above it, and every tile restated a number its
+  destination tab showed in full. Cutting it orphaned seventeen fields in
+  `getUserOverview`, three of which — `cancelledUpcomingReservations`,
+  `recurringSeries`, `unreadNotifications` — had never had a reader at all. The
+  function went from 18 `select` statements to 8. `user-overview-service.spec.ts`
+  now pins that: every count it computes must be a count it returns.
+- **Bands are names, not a number.** The membership rows were already being read
+  to scope reservations, and the join to `band` was already there to skip
+  deleted ones — so the names come out of a query that was happening anyway. The
+  scoreboard dropped from five stats to four, which also lays out as a clean 2×2
+  on a phone.
+- **Moderation is its own tab.** Comms was answering "how do we reach them" and
+  "what have they done" at once. Standings and both report tables moved to
+  `ModerationPanel`, leaving Comms with conversations, notifications and email
+  lists.
+- **Standings are read-only.** A standing is applied by the system when a report
+  is upheld (`flag-service` → `restrictStanding`) and lifted through the appeal
+  workflow. Setting one by hand from a member's record is a non-goal, so the
+  restore actions and the "Direct messages" card went with it —
+  `setMemberStanding` and `restoreMemberStanding` are now called by no UI.
+- **Badges mean one thing.** A badge is a task, not a size. The neutral volume
+  counts (upcoming bookings, band count) lost theirs; Comms kept unread threads
+  and Moderation took the open reports.
+
+### The tab bar was broken on a phone
+
+`TabBar` rendered a daisyUI `join`, which does not wrap, inside an
+`overflow-x-hidden` `<main>`. Past about five tabs the rest were clipped off the
+edge with no way to reach them — not scrolled, gone. Three pages had already
+hand-rolled an `overflow-x-auto` wrapper around the component to dodge it.
+
+The fix is a `collapse` prop: below `md` the set becomes a `bits-ui`
+`DropdownMenu` whose trigger names the active tab and carries its badge. Above
+`md` it is the button group as before. The three pages dropped their wrappers.
+
+While in there, the desktop control became a real `Tabs.List` of `Tabs.Trigger`.
+It had been a `ToggleGroup`, which announces `role="radiogroup"` of `role="radio"`
+— a tab UI presenting itself as a set of radio buttons, with no arrow-key
+navigation and no "tab 3 of 8". `activationMode="manual"`, because the automatic
+default would mount and fetch every panel you arrow past. Trigger ids are
+explicit (`tab-{key}`) so the panels, which the page renders outside the
+component, can point back at them with `aria-labelledby`.

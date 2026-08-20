@@ -17,15 +17,11 @@
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
 	import { Field, CheckboxGroup } from '$lib/components/shared/Form';
 	import FormField from '$lib/components/shared/Form/FormField.svelte';
+	import ShiftFormFields from '$lib/components/shared/volunteer/ShiftFormFields.svelte';
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
 	import { rowLink } from '$lib/actions/row-link';
-	import { formatDateShort } from '$lib/utils/format';
-	import {
-		DEFAULT_TIMEZONE,
-		VOLUNTEER_SHIFT_NOTES_MAX,
-		volunteerRoleGroups,
-		volunteerRoleGroupLabels
-	} from '$lib/config';
+	import { formatDateShort, toLocalDateTime } from '$lib/utils/format';
+	import { DEFAULT_TIMEZONE, volunteerRoleGroups, volunteerRoleGroupLabels } from '$lib/config';
 	import { IconArchive, IconArchiveOff, IconTrash, IconDeviceFloppy } from '@tabler/icons-svelte';
 	import {
 		getVolunteerRoleDetail,
@@ -73,23 +69,11 @@
 		return `${fmt.format(start)}–${fmt.format(end)}`;
 	}
 
-	/** `YYYY-MM-DDTHH:mm` in club time, for a datetime-local default. */
-	function localInput(d: Date): string {
-		const date = new Intl.DateTimeFormat('en-CA', { timeZone: DEFAULT_TIMEZONE }).format(d);
-		const time = new Intl.DateTimeFormat('en-GB', {
-			timeZone: DEFAULT_TIMEZONE,
-			hour: '2-digit',
-			minute: '2-digit',
-			hour12: false
-		}).format(d);
-		return `${date}T${time}`;
-	}
-
 	// Tomorrow, running for however long this role usually runs.
 	const START_MS = Date.now() + 86_400_000;
-	let shiftStart = $derived(localInput(new Date(START_MS)));
+	let shiftStart = $derived(toLocalDateTime(new Date(START_MS)));
 	let shiftEnd = $derived(
-		localInput(new Date(START_MS + (role.defaultDurationMinutes ?? 4 * 60) * 60_000))
+		toLocalDateTime(new Date(START_MS + (role.defaultDurationMinutes ?? 4 * 60) * 60_000))
 	);
 
 	// Until there's an in-app way to mail volunteers, the useful move is to hand
@@ -326,23 +310,12 @@
 						onsuccess={() => getShifts({ volunteerRoleId: id, from }).refresh()}
 					>
 						{#snippet form()}
-							<input type="hidden" name="volunteerRoleId" value={role.id} />
-							<FormField name="startsAt" label="Starts" type="datetime-local" value={shiftStart} />
-							<FormField name="endsAt" label="Ends" type="datetime-local" value={shiftEnd} />
-							<FormField
-								name="capacity"
-								label="People needed"
-								type="number"
-								min="1"
-								value={String(role.defaultCapacity ?? 1)}
-								description="Claims beyond this are refused."
-							/>
-							<FormField
-								name="notes"
-								label="Anything they should know"
-								type="textarea"
-								maxlength={VOLUNTEER_SHIFT_NOTES_MAX}
-								description="Where to meet, what to bring — shown when they claim it."
+							<ShiftFormFields
+								form={createShift}
+								roleId={role.id}
+								startsAt={shiftStart}
+								endsAt={shiftEnd}
+								capacity={String(role.defaultCapacity ?? 1)}
 							/>
 						{/snippet}
 					</Action>

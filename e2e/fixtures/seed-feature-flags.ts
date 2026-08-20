@@ -10,8 +10,13 @@
  */
 import { withPlatformEnv } from './platform-db';
 
-/** Gates /band/[slug]/subscription, the page editor and /band-site/**. */
-export const ENABLED_FLAGS = ['bandPremium'] as const;
+/**
+ * `bandPremium` gates /band/[slug]/subscription, the page editor and
+ * /band-site/**. `directMessages` gates every member↔member endpoint and the
+ * recipient picker — without it `requireFeature` rejects before any of the
+ * messaging lifecycle can be exercised.
+ */
+export const ENABLED_FLAGS = ['bandPremium', 'directMessages'] as const;
 
 export async function seedFeatureFlags(): Promise<void> {
 	await withPlatformEnv(async ({ env }) => {

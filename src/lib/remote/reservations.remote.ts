@@ -241,11 +241,14 @@ export const getStaffReservationDetail = query(z.string(), async (id) => {
 			memberPhone: user.phone,
 			bandId: band.id,
 			bandName: band.name,
-			bandSlug: band.slug
+			bandSlug: band.slug,
+			eventId: event.id,
+			eventTitle: event.title
 		})
 		.from(reservation)
 		.innerJoin(user, eq(reservation.createdByUserId, user.id))
 		.leftJoin(band, bandBookerJoin)
+		.leftJoin(event, eventBookerJoin)
 		.where(eq(reservation.id, id))
 		.limit(1);
 
@@ -272,11 +275,21 @@ export const getStaffReservationDetail = query(z.string(), async (id) => {
 		bandId: rows[0].bandId,
 		bandName: rows[0].bandName,
 		bandSlug: rows[0].bandSlug,
+		eventId: rows[0].eventId,
+		eventTitle: rows[0].eventTitle,
 		// The booking band as a record. `bandId`/`bandName` stay for the header
 		// action and the page title, which are not references.
 		band: rows[0].bandId
 			? toBandRef({ id: rows[0].bandId, name: rows[0].bandName, slug: rows[0].bandSlug })
 			: null,
+		// Who the room is held for — a band, a show, or the member themselves.
+		// The list column and this page then lead with the same record.
+		booker: toBookerRef({
+			bookerType: rows[0].reservation.bookerType,
+			member: rows[0].member,
+			band: { id: rows[0].bandId, name: rows[0].bandName, slug: rows[0].bandSlug },
+			event: { id: rows[0].eventId, title: rows[0].eventTitle }
+		}),
 		createdByStaffName
 	};
 
@@ -847,7 +860,12 @@ export const getStaffReservations = query(staffReservationFiltersSchema, async (
 	if (filters.search) {
 		const pattern = `%${filters.search}%`;
 		conditions.push(
-			or(like(user.name, pattern), like(user.email, pattern), like(band.name, pattern))
+			or(
+				like(user.name, pattern),
+				like(user.email, pattern),
+				like(band.name, pattern),
+				like(event.title, pattern)
+			)
 		);
 	}
 
@@ -886,6 +904,7 @@ export const getStaffReservations = query(staffReservationFiltersSchema, async (
 		.from(reservation)
 		.innerJoin(user, eq(reservation.createdByUserId, user.id))
 		.leftJoin(band, bandBookerJoin)
+		.leftJoin(event, eventBookerJoin)
 		.where(where);
 
 	const { rows, pagination } = await paginate(dataQ, countQ, {

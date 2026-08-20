@@ -1,5 +1,4 @@
-import { query, form, command } from '$app/server';
-import { toGenericRef } from '$lib/server/entity/refs';
+import { query, form } from '$app/server';
 import { error, invalid } from '@sveltejs/kit';
 import * as z from 'zod';
 import { requireUser } from '$lib/server/authorization';
@@ -9,12 +8,11 @@ import {
 	replyToDirectThread,
 	acceptDirectThread,
 	declineDirectThread,
-	listDirectThreads,
 	listMemberConversations,
 	getDirectThread,
 	counterpartOf
 } from '$lib/server/inbox/direct-service';
-import { markPortalThreadRead, getPortalThread } from '$lib/server/inbox/portal-service';
+import { getPortalThread } from '$lib/server/inbox/portal-service';
 import {
 	blockUser,
 	unblockUser,
@@ -45,39 +43,24 @@ import { updateStatus } from '$lib/server/inbox/thread-service';
 //
 // None of these can reach an internal note, and none of them are reachable by
 // staff. A reported conversation is read through the flags queue instead.
+//
+// Note what the mutations below do NOT do: refresh the conversation list.
+// Queries are cached per argument and the list is paginated, so a handler here
+// cannot name the entry the page is holding — it would refresh one nothing
+// renders, which is the bug these calls used to have when they pointed at
+// `getMyDirectThreads()`. The pages refresh in `onsuccess`, where the page
+// number is in scope. See `src/routes/member/messages/list-state.svelte.ts`.
 
 /** Everything in the member's Messages list: staff threads and member threads. */
 export const getMyMessages = query(
 	z.object({ page: z.coerce.number().int().min(1).optional() }).optional(),
 	async (args) => {
 		const user = requireUser();
-		const { rows, pagination } = await listMemberConversations(user.id, {
-			page: args?.page ?? 1,
-			pageSize: 25
-		});
-		return {
-			rows: rows.map((c) => ({
-				...c,
-				// A conversation is titled by whoever is on the other end of it, or by
-				// its subject where the other end is the collective rather than a
-				// person. The row's own unread state and status keep their columns.
-				ref: toGenericRef('thread', {
-					id: c.id,
-					title:
-						c.channel === 'direct' ? (c.counterpartName ?? 'Member') : (c.subject ?? 'Conversation')
-				})
-			})),
-			pagination
-		};
-	}
-);
-
-export const getMyDirectThreads = query(
-	z.object({ page: z.coerce.number().int().min(1).optional() }).optional(),
-	async (args) => {
-		await requireFeature('directMessages');
-		const user = requireUser();
-		return listDirectThreads(user.id, { page: args?.page ?? 1, pageSize: 25 });
+		// No entity ref here, unlike every other list: #234 made this a two-pane
+		// inbox whose whole row is the anchor, with an active state and a channel
+		// icon. An identity's own link inside that row would be an anchor inside an
+		// anchor, so `ConversationList` owns its markup and the tier stays out.
+		return listMemberConversations(user.id, { page: args?.page ?? 1, pageSize: 25 });
 	}
 );
 
@@ -102,16 +85,6 @@ export const getMyMessageThread = query(z.string(), async (id) => {
 	if (portal) return { kind: 'staff' as const, ...portal };
 
 	throw error(404, 'Conversation not found');
-});
-
-export const getMyDirectThread = query(z.string(), async (id) => {
-	await requireFeature('directMessages');
-	const user = requireUser();
-	const thread = await getDirectThread(id, user.id);
-	// One 404 whether it is someone else's, is not a direct thread, or does not
-	// exist. The caller has no business telling those apart.
-	if (!thread) throw error(404, 'Conversation not found');
-	return thread;
 });
 
 const startDirectSchema = z.object({
@@ -158,7 +131,6 @@ export const startDirectConversation = form(startDirectSchema, async (data, issu
 		invalid(issue.body('You have started a lot of conversations today. Try again tomorrow.'));
 	}
 
-	void getMyDirectThreads().refresh();
 	return { success: true };
 });
 
@@ -182,8 +154,7 @@ export const sendDirectMessage = form(sendDirectSchema, async (data, issue) => {
 		invalid(issue.body('You can no longer write in this conversation.'));
 	}
 
-	void getMyDirectThread(data.threadId).refresh();
-	void getMyDirectThreads().refresh();
+	void getMyMessageThread(data.threadId).refresh();
 	void getMemberLayout().refresh();
 	return { success: true };
 });
@@ -199,8 +170,7 @@ export const acceptDirectRequest = form(threadIdSchema, async (data, issue) => {
 		invalid(issue.threadId('This request is no longer available.'));
 	}
 
-	void getMyDirectThread(data.threadId).refresh();
-	void getMyDirectThreads().refresh();
+	void getMyMessageThread(data.threadId).refresh();
 	void getMemberLayout().refresh();
 	return { success: true };
 });
@@ -219,7 +189,6 @@ export const declineDirectRequest = form(threadIdSchema, async (data, issue) => 
 		invalid(issue.threadId('This request is no longer available.'));
 	}
 
-	void getMyDirectThreads().refresh();
 	void getMemberLayout().refresh();
 	return { success: true };
 });
@@ -238,8 +207,7 @@ export const blockFromThread = form(threadIdSchema, async (data, issue) => {
 
 	await blockUser({ blockerUserId: user.id, blockedUserId: other, source: 'manual' });
 
-	void getMyDirectThread(data.threadId).refresh();
-	void getMyDirectThreads().refresh();
+	void getMyMessageThread(data.threadId).refresh();
 	return { success: true };
 });
 
@@ -253,17 +221,6 @@ export const unblockMember = form(z.object({ userId: z.string().min(1) }), async
 	await unblockUser(user.id, data.userId);
 	void getMyBlocks().refresh();
 	return { success: true };
-});
-
-// A command rather than a write inside getMyDirectThread: queries are cached and
-// deduped, so a write hidden in a read fires an unpredictable number of times.
-export const markDirectThreadRead = command(z.string(), async (id) => {
-	await requireFeature('directMessages');
-	const user = requireUser();
-	// Reuses the portal cursor write: it is keyed on (threadId, userId) and knows
-	// nothing about channels, so there is no second copy to keep in step.
-	await markPortalThreadRead(id, user.id);
-	void getMemberLayout().refresh();
 });
 
 // ---------------------------------------------------------------------------
@@ -332,7 +289,6 @@ export const reportDirectThread = form(reportDirectSchema, async (data, issue) =
 	});
 	await updateStatus(data.threadId, 'resolved');
 
-	void getMyDirectThreads().refresh();
 	void getMemberLayout().refresh();
 	return { success: true };
 });

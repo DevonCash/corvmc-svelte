@@ -30,7 +30,16 @@
 	import ConflictWarnings from '$lib/components/shared/reservations/ConflictWarnings.svelte';
 	import InfoCard from '$lib/components/shared/InfoCard.svelte';
 	import Table from '$lib/components/shared/Table.svelte';
-	import { formatDollars, formatTime, fullDate, toLocalDate, toLocalTime } from '$lib/utils/format';
+	import {
+		formatDateShort,
+		formatDollars,
+		formatTime,
+		formatTimeRange,
+		fullDate,
+		toLocalDate,
+		toLocalDateTime,
+		toLocalTime
+	} from '$lib/utils/format';
 	import { priceDisplay } from '$lib/utils/event-ticketing';
 	import Badge from '$lib/components/shared/Badge.svelte';
 	import Button from '$lib/components/shared/Button.svelte';
@@ -41,6 +50,10 @@
 	import { invalidateAll } from '$app/navigation';
 	import { rejectListing } from '$lib/remote/community-events.remote';
 	import { imageSrc } from '$lib/utils/images';
+	import CardTitle from '$lib/components/shared/Card/CardTitle.svelte';
+	import EmptyState from '$lib/components/shared/EmptyState.svelte';
+	import ShiftFormFields from '$lib/components/shared/volunteer/ShiftFormFields.svelte';
+	import { getShifts, getVolunteerRoles, createShift } from '$lib/remote/volunteer.remote';
 
 	const rejectFields = rejectListing.fields;
 
@@ -53,6 +66,41 @@
 	// CMC only sells shows CMC produces — see the rule in event-service.update().
 	const cmcCanSell = $derived(evt.source === 'cmc');
 	const recurringSeries = $derived(await getEventRecurringSeries(id));
+
+	// ── Volunteer staffing ────────────────────────────────────────────────
+	// Cancelled shifts are left out: this card answers "is this show staffed",
+	// and a called-off shift is not staffing. The shift list is where you go to
+	// see what was called off.
+	const shifts = $derived(await getShifts({ eventId: id }));
+	const volunteerRoles = $derived(await getVolunteerRoles());
+	const liveVolunteerRoles = $derived(volunteerRoles.filter((r) => r.isActive));
+
+	/**
+	 * Volunteers arrive when the doors do, not at downbeat, so a shift scheduled
+	 * from this page starts at `doorsAt` when the event has one. The end falls
+	 * back to the picked role's own default length for an event with no end time
+	 * — only community listings are allowed one, but they are allowed one.
+	 */
+	let shiftRoleId = $state('');
+	const shiftStart = $derived(toLocalDateTime(evt.doorsAt ?? evt.startsAt));
+	const shiftEnd = $derived.by(() => {
+		if (evt.endsAt) return toLocalDateTime(evt.endsAt);
+		const role = volunteerRoles.find((r) => r.id === shiftRoleId);
+		const minutes = role?.defaultDurationMinutes ?? 4 * 60;
+		return toLocalDateTime(new Date((evt.doorsAt ?? evt.startsAt).getTime() + minutes * 60_000));
+	});
+	const shiftCapacity = $derived(
+		String(volunteerRoles.find((r) => r.id === shiftRoleId)?.defaultCapacity ?? 1)
+	);
+
+	// The select has no placeholder option, so a bound value matching nothing
+	// leaves nothing selected — which posts an empty role instead of the one on
+	// screen. Guarded so it seeds once and never clobbers an actual choice.
+	$effect(() => {
+		if (shiftRoleId) return;
+		const first = volunteerRoles.find((r) => r.isActive);
+		if (first) shiftRoleId = first.id;
+	});
 
 	// ── Edit state ────────────────────────────────────────────────────────
 	let editing = $state(false);
@@ -869,6 +917,81 @@
 			<p class="text-muted">
 				No space held for this event. Use Edit to reserve the practice space.
 			</p>
+		{/if}
+	</InfoCard>
+
+	<!--
+		Volunteer staffing. Always rendered, for the same reason the Space
+		Reservation card above is: with the card hidden, "nobody is staffing this
+		show" and "this page doesn't track staffing" look identical, and the second
+		reading is how a calendar of events reaches production with nothing booked.
+	-->
+	<InfoCard title="Volunteer Shifts">
+		{#snippet header(title)}
+			<div class="flex items-center justify-between gap-2">
+				<CardTitle>{title}</CardTitle>
+				{#if liveVolunteerRoles.length > 0}
+					<Action
+						action={createShift}
+						label="Schedule a shift"
+						variant="ghost"
+						size="sm"
+						modalTitle="Schedule a shift for {evt.title}"
+						submitLabel="Create"
+						successToast="Shift scheduled"
+						onsuccess={() => getShifts({ eventId: id }).refresh()}
+					>
+						{#snippet form()}
+							<!--
+								The event is the one thing this form already knows, so it is
+								locked rather than offered as a picker.
+							-->
+							<ShiftFormFields
+								form={createShift}
+								roles={liveVolunteerRoles}
+								bind:roleId={shiftRoleId}
+								lockedEvent={{ id: evt.id, title: evt.title }}
+								startsAt={shiftStart}
+								endsAt={shiftEnd}
+								capacity={shiftCapacity}
+							/>
+						{/snippet}
+					</Action>
+				{/if}
+			</div>
+		{/snippet}
+
+		{#if shifts.length === 0}
+			<EmptyState
+				title="No volunteer shifts"
+				description="Nobody is scheduled to work this show yet."
+			/>
+		{:else}
+			<Table>
+				{#snippet head()}
+					<th>Role</th>
+					<th class="whitespace-nowrap">When</th>
+					<th class="cell-num">Filled</th>
+				{/snippet}
+
+				{#each shifts as shift (shift.id)}
+					<tr class="hover">
+						<td class="cell-primary">
+							<a href={resolve(`/staff/volunteer/shifts/${shift.id}`)} class="link font-medium"
+								>{shift.roleName}</a
+							>
+						</td>
+						<td class="whitespace-nowrap">
+							{formatDateShort(shift.startsAt)}, {formatTimeRange(shift.startsAt, shift.endsAt)}
+						</td>
+						<td class="cell-num">
+							<span class:text-warning={shift.claimed < shift.capacity}>
+								{shift.claimed}/{shift.capacity}
+							</span>
+						</td>
+					</tr>
+				{/each}
+			</Table>
 		{/if}
 	</InfoCard>
 

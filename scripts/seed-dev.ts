@@ -527,6 +527,7 @@ interface SeedEvent {
 	id: string;
 	status: string;
 	startsAt: Date;
+	endsAt: Date | null;
 }
 /** Matches the `reservation.hourlyRateCents` site-config default. */
 const HOURLY_RATE_CENTS = 1500;
@@ -849,6 +850,7 @@ async function seedEvents(users: SeedUser[]): SeedEvent[] {
 	const staffUsers = users.slice(0, 6);
 
 	async function createEventReservation(
+		eventId: string,
 		day: number,
 		eventStartHour: number,
 		eventEndHour: number,
@@ -861,7 +863,9 @@ async function seedEvents(users: SeedUser[]): SeedEvent[] {
 			.insert(reservation)
 			.values({
 				bookerType: 'event',
-				bookerId: 'event',
+				// The real polymorphic pointer, as event-service writes it. A literal
+				// 'event' here left every seeded hold unattached to its show.
+				bookerId: eventId,
 				createdByUserId,
 				status: reservationStatus,
 				startsAt,
@@ -883,9 +887,13 @@ async function seedEvents(users: SeedUser[]): SeedEvent[] {
 		const publishedAt = new Date(startsAt.getTime() - randomInt(7, 21) * 86400000);
 		const creator = pick(staffUsers);
 
+		// The id is minted up front so the hold can point at the event, the same
+		// ordering event-service.create() uses.
+		const eventId = crypto.randomUUID();
 		let reservationId: string | undefined;
 		if (Math.random() < 0.75) {
 			reservationId = await createEventReservation(
+				eventId,
 				day,
 				hour,
 				hour + duration,
@@ -897,6 +905,7 @@ async function seedEvents(users: SeedUser[]): SeedEvent[] {
 		const [e] = await db
 			.insert(event)
 			.values({
+				id: eventId,
 				title: pick(EVENT_TITLES),
 				description: 'Join us for an evening of live music and community.',
 				startsAt,
@@ -944,9 +953,11 @@ async function seedEvents(users: SeedUser[]): SeedEvent[] {
 		const creator = pick(staffUsers);
 		const config = futureConfigs[i];
 
+		const eventId = crypto.randomUUID();
 		let reservationId: string | undefined;
 		if (Math.random() < 0.75) {
 			reservationId = await createEventReservation(
+				eventId,
 				day,
 				hour,
 				hour + duration,
@@ -958,6 +969,7 @@ async function seedEvents(users: SeedUser[]): SeedEvent[] {
 		const [e] = await db
 			.insert(event)
 			.values({
+				id: eventId,
 				title: pick(EVENT_TITLES),
 				description: config.externalTicketUrl
 					? 'Tickets for this one are sold through our partner venue.'
@@ -986,14 +998,23 @@ async function seedEvents(users: SeedUser[]): SeedEvent[] {
 		const hour = randomInt(18, 20);
 		const creator = pick(staffUsers);
 
+		const eventId = crypto.randomUUID();
 		let reservationId: string | undefined;
 		if (Math.random() < 0.75) {
-			reservationId = await createEventReservation(day, hour, hour + 3, creator.id, 'scheduled');
+			reservationId = await createEventReservation(
+				eventId,
+				day,
+				hour,
+				hour + 3,
+				creator.id,
+				'scheduled'
+			);
 		}
 
 		const [e] = await db
 			.insert(event)
 			.values({
+				id: eventId,
 				title: pick(EVENT_TITLES),
 				description: 'Details TBD',
 				startsAt: ptDate(day, hour),
@@ -1008,10 +1029,19 @@ async function seedEvents(users: SeedUser[]): SeedEvent[] {
 	}
 
 	const cancelledCreator = pick(staffUsers);
-	const cancelledResId = await createEventReservation(7, 14, 20, cancelledCreator.id, 'cancelled');
+	const cancelledEventId = crypto.randomUUID();
+	const cancelledResId = await createEventReservation(
+		cancelledEventId,
+		7,
+		14,
+		20,
+		cancelledCreator.id,
+		'cancelled'
+	);
 	const [cancelled] = await db
 		.insert(event)
 		.values({
+			id: cancelledEventId,
 			title: 'Cancelled: Outdoor Festival',
 			description: 'Unfortunately cancelled due to weather.',
 			startsAt: ptDate(7, 14),
@@ -1048,7 +1078,9 @@ async function seedEvents(users: SeedUser[]): SeedEvent[] {
 		const duration = 3;
 		const protoStart = ptDate(protoDay, hour);
 
+		const protoEventId = crypto.randomUUID();
 		const protoResId = await createEventReservation(
+			protoEventId,
 			protoDay,
 			hour,
 			hour + duration,
@@ -1059,6 +1091,7 @@ async function seedEvents(users: SeedUser[]): SeedEvent[] {
 		const [proto] = await db
 			.insert(event)
 			.values({
+				id: protoEventId,
 				title: 'Weekly Open Mic',
 				description: 'Sign up at the door — all skill levels welcome.',
 				startsAt: protoStart,
@@ -1088,7 +1121,9 @@ async function seedEvents(users: SeedUser[]): SeedEvent[] {
 
 		for (let w = 1; w <= 2; w++) {
 			const instDay = protoDay + w * 7;
+			const instEventId = crypto.randomUUID();
 			const instResId = await createEventReservation(
+				instEventId,
 				instDay,
 				hour,
 				hour + duration,
@@ -1098,6 +1133,7 @@ async function seedEvents(users: SeedUser[]): SeedEvent[] {
 			const [inst] = await db
 				.insert(event)
 				.values({
+					id: instEventId,
 					title: proto.title,
 					description: proto.description,
 					startsAt: ptDate(instDay, hour),
@@ -3149,6 +3185,10 @@ async function seedInbox(adminUser: SeedUser, memberUser: SeedUser) {
 				contactName: 'Sarah Chen',
 				contactEmail: 'sarah.chen@example.com',
 				messageCount: 2,
+				// Staff answered and nobody has written back: still open, but waiting
+				// on her rather than on us, so it carries the awaiting-reply marker and
+				// drops out of the nav badge. Matches the outbound message below.
+				awaitingReplySince: new Date(now.getTime() - 2 * hour),
 				lastMessageAt: new Date(now.getTime() - 2 * hour),
 				createdAt: new Date(now.getTime() - day),
 				updatedAt: new Date(now.getTime() - 2 * hour)
@@ -3220,6 +3260,9 @@ async function seedInbox(adminUser: SeedUser, memberUser: SeedUser) {
 				contactName: memberUser.name,
 				contactEmail: memberUser.email,
 				messageCount: 2,
+				// Same again on the portal channel, where the member replying from
+				// /member/messages is what clears it.
+				awaitingReplySince: new Date(now.getTime() - 4 * hour),
 				lastMessageAt: new Date(now.getTime() - 4 * hour),
 				createdAt: new Date(now.getTime() - day),
 				updatedAt: new Date(now.getTime() - 4 * hour)
@@ -3766,7 +3809,7 @@ async function main() {
 	const volunteerHours = await seedVolunteerHours(activeVolunteers, volunteerRoles);
 	const volunteerInterests = await seedVolunteerInterests(activeVolunteers, volunteerRoles);
 	const certifications = await seedCertifications(allUsers, volunteerRoles);
-	const volunteerShifts = await seedVolunteerShifts(activeVolunteers, volunteerRoles);
+	const volunteerShifts = await seedVolunteerShifts(activeVolunteers, volunteerRoles, events);
 	const suggestions = await seedSuggestions(allUsers, adminUser);
 
 	await db.run(sql`PRAGMA foreign_keys = ON`);
@@ -4101,7 +4144,7 @@ async function seedCertifications(users: any[], roles: any[]) {
  * feedback, today's confirmed, upcoming ones part-claimed so the staff list
  * shows real needed-vs-claimed numbers and the member board has things to take.
  */
-async function seedVolunteerShifts(users: any[], roles: any[]) {
+async function seedVolunteerShifts(users: any[], roles: any[], events: SeedEvent[]) {
 	console.log('Seeding volunteer shifts...');
 	const liveRoles = roles.filter((r: any) => r.isActive !== false);
 	if (liveRoles.length === 0 || users.length === 0) return { shifts: 0, signups: 0, feedback: 0 };
@@ -4114,16 +4157,43 @@ async function seedVolunteerShifts(users: any[], roles: any[]) {
 		return d;
 	};
 
+	// Most volunteer shifts staff a show, so most of the seeded ones carry an
+	// event — but not all of them. Work parties and gear-repair days are why
+	// `eventId` is nullable, and both branches of every "linked to an event?"
+	// check need data or nobody sees the unlinked rendering until production.
+	//
+	// Attached shifts take their times *from the show*, half an hour before doors
+	// through the end of the night. A shift pointing at a gig on some other
+	// evening would be worse than no link at all.
+	const published = events.filter((e) => e.status === 'published');
+	const pastShows = published.filter((e) => e.startsAt < now);
+	const futureShows = published.filter((e) => e.startsAt >= now);
+
 	const shiftRows = await batchInsert(
 		volunteerShift,
-		[-10, -7, -4, -2, 1, 2, 4, 6, 8, 11].map((offset, i) => ({
-			id: randomUUID(),
-			volunteerRoleId: pick(liveRoles).id,
-			startsAt: at(offset, 18),
-			endsAt: at(offset, 22),
-			capacity: 1 + (i % 3),
-			notes: i % 2 === 0 ? 'Meet at the side door 15 minutes early.' : null
-		}))
+		[-10, -7, -4, -2, 1, 2, 4, 6, 8, 11].map((offset, i) => {
+			// Every third shift is deliberately left unattached.
+			const pool = offset < 0 ? pastShows : futureShows;
+			const show = i % 3 === 2 ? undefined : pool[Math.floor(i / 3) % (pool.length || 1)];
+
+			const startsAt = show ? new Date(show.startsAt.getTime() - 30 * 60_000) : at(offset, 18);
+			const endsAt = show
+				? (show.endsAt ?? new Date(show.startsAt.getTime() + 4 * 3_600_000))
+				: at(offset, 22);
+
+			return {
+				id: randomUUID(),
+				volunteerRoleId: pick(liveRoles).id,
+				eventId: show?.id ?? null,
+				startsAt,
+				endsAt,
+				capacity: 1 + (i % 3),
+				notes: i % 2 === 0 ? 'Meet at the side door 15 minutes early.' : null
+			};
+		}),
+		// One more bound column per row than this insert used to carry, and D1 caps
+		// a statement at 100 parameters.
+		8
 	);
 
 	const signupRows: any[] = [];

@@ -195,11 +195,13 @@ Node-script vars (drizzle-kit, seed, bridge scripts) go in **`.env`**. Both are 
   to anyone the recipient forwards our reply to.
   - Requires `MX replies.corvmc.org → inbound.postmarkapp.com` (priority 10) and _Inbound
     domain forwarding_ set to `replies.corvmc.org` in the Postmark server settings.
+  - **Enabled** as of 2026-08-19: the MX is live and `INBOX_REPLY_ADDRESS` is set in
+    `wrangler.toml`. Unsetting it is the rollback — replies fall back to
+    `Reply-To: STAFF_CONTACT_EMAIL`, a human rather than a bounce. Enablement steps and the
+    reply-routing troubleshooting table: [inbox-reply-setup.md](inbox-reply-setup.md).
   - **Never point `corvmc.org`'s root MX at Postmark** — `contact@corvmc.org` is a live
     mailbox. Also confirm Cloudflare Email Routing is off for the zone; it claims the zone's
     MX records.
-  - Until that MX is live, leave `INBOX_REPLY_ADDRESS` unset: replies then fall back to
-    `Reply-To: STAFF_CONTACT_EMAIL`, which reaches a human instead of bouncing.
 - The `email` **channel toggle** (Staff → Settings → Inbox Channels) gates only _new-sender_
   mail. A reply to a thread we started always lands, because we invited it.
 
@@ -363,16 +365,11 @@ When you add, move, or remove a route:
    the production database (verify your wrangler remote-binding setup before assuming this
    — the script itself has no `--remote` flag).
 
-### The nightly bot (optional, requires Anthropic API access)
-
-`.github/workflows/nightly-docs-sync.yml` runs at 10:00 UTC daily: it re-runs the same
-deterministic detector plus a git diff against the moving `docs-sync-last` tag, and **only
-if** something changed does it invoke Claude (via `anthropics/claude-code-action`) to draft
-a docs-only PR for human review. It needs the Claude GitHub App installed and an
-`ANTHROPIC_API_KEY` repo secret; without them the workflow simply fails at the model step —
-the app is unaffected. You can disable it entirely (Actions → Nightly Docs Sync → Disable
-workflow) and rely on the manual procedure; nothing else depends on it. Note GitHub
-auto-pauses scheduled workflows after 60 days of repo inactivity.
+There is no automation behind this — the procedure above is the whole mechanism. A
+`nightly-docs-sync.yml` workflow used to run a detector and have Claude draft a docs-only
+PR from it; it was removed in August 2026, having failed on every scheduled run because
+the `ANTHROPIC_API_KEY` secret it needs was never added. `pnpm docs:check` in CI remains
+the only automatic gate, and it checks integrity, not staleness.
 
 Also keep current as you change things:
 
