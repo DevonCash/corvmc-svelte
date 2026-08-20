@@ -5,7 +5,7 @@
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
-	import { EntityChip, EntityIdentity } from '$lib/components/shared/entity';
+	import { EntityIdentity } from '$lib/components/shared/entity';
 	import Button from '$lib/components/shared/Button.svelte';
 	import TabBar from '$lib/components/shared/TabBar.svelte';
 	import Form from '$lib/components/shared/Form';
@@ -61,7 +61,7 @@
 								{#snippet subtitle()}
 									{res.ref.subtitle}
 									{#if res.bookedBy.id}
-										&middot; Booked by <EntityChip ref={res.bookedBy} icon={false} />
+										&middot; Booked by {res.bookedBy.title}
 									{/if}
 									{#if res.notes}
 										&middot; {res.notes}
@@ -103,7 +103,7 @@
 								{#snippet subtitle()}
 									{res.ref.subtitle}
 									{#if res.bookedBy.id}
-										&middot; Booked by <EntityChip ref={res.bookedBy} icon={false} />
+										&middot; Booked by {res.bookedBy.title}
 									{/if}
 								{/snippet}
 							</EntityIdentity>
