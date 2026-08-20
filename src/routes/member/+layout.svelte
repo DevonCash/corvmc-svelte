@@ -18,6 +18,7 @@
 	import Avatar from '$lib/components/shared/Avatar.svelte';
 	import Button from '$lib/components/shared/Button.svelte';
 	import ErrorToastBoundary from '$lib/components/shared/ErrorToastBoundary.svelte';
+	import { EntityViewer } from '$lib/components/shared/entity';
 	import { getMemberLayout } from '$lib/remote/layout.remote';
 
 	let { children } = $props();
@@ -113,6 +114,13 @@
 		</Nav.Item>
 	{/snippet}
 	<ErrorToastBoundary>
-		{@render children()}
+		<EntityViewer
+			panel="member"
+			userId={layout.user.id}
+			isStaff={layout.isStaff}
+			bands={layout.userBands}
+		>
+			{@render children()}
+		</EntityViewer>
 	</ErrorToastBoundary>
 </AppShell>

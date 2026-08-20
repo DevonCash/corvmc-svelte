@@ -1,5 +1,6 @@
 <script lang="ts">
 	import ErrorToastBoundary from '$lib/components/shared/ErrorToastBoundary.svelte';
+	import { EntityViewer } from '$lib/components/shared/entity';
 	import Badge from '$lib/components/shared/Badge.svelte';
 	import AppShell from '$lib/components/shared/AppShell.svelte';
 	import Nav from '$lib/components/shared/Nav';
@@ -157,6 +158,10 @@
 		</Nav.Group>
 	{/snippet}
 	<ErrorToastBoundary>
-		{@render children()}
+		<!-- `getStaffLayout` redirects anyone without the role, so reaching this
+		     markup is itself the proof that the viewer is staff. -->
+		<EntityViewer panel="staff" userId={layout.user.id} isStaff bands={layout.userBands}>
+			{@render children()}
+		</EntityViewer>
 	</ErrorToastBoundary>
 </AppShell>
