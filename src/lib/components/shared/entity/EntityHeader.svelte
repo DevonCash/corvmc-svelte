@@ -3,7 +3,7 @@
 	import type { EntityRef } from '$lib/types/entity';
 	import EntityAvatar from '../directory/EntityAvatar.svelte';
 	import StatusBadge from '../StatusBadge.svelte';
-	import { entityKinds } from './registry';
+	import { entityKinds, isNoteworthyStatus } from './registry';
 
 	/**
 	 * The identity strip on a record's own detail page — avatar, name, the
@@ -57,7 +57,13 @@
 				<span class="text-muted">{ref.pronouns}</span>
 			{/if}
 			{#if qualifiers}{@render qualifiers()}{/if}
-			{#if ref.status}
+			{#if isNoteworthyStatus(ref.status) && ref.status}
+				<!--
+					Exception-only, the same as on a row or a card. A header is the one
+					place a labelled badge still earns its width — there is exactly one
+					record on the page — but "Active" beside a member's own name is
+					still telling you that nothing has happened.
+				-->
 				<StatusBadge status={ref.status} label />
 			{/if}
 		</div>
