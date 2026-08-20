@@ -3,12 +3,10 @@
 	import type { EntityRef } from '$lib/types/entity';
 	import Card from '../Card/Card.svelte';
 	import CardBody from '../Card/CardBody.svelte';
-	import EntityAvatar from '../directory/EntityAvatar.svelte';
+	import EntityIdentity from './EntityIdentity.svelte';
 	import StatusBadge from '../StatusBadge.svelte';
 	import { imageSrc } from '$lib/utils/images';
 	import { entityKinds, entityIcon, toneFor, isNoteworthyStatus } from './registry';
-	import { getEntityViewer } from './context';
-	import { entityHref } from '$lib/utils/entity-href';
 
 	/**
 	 * One record, expanded: image, name, status, a few facts, and its actions.
@@ -34,10 +32,11 @@
 	}: {
 		ref: EntityRef;
 		/**
-		 * `auto` follows the registry's shape for the type. Override only to
-		 * suppress the media slot, or to force a shape the registry doesn't give.
+		 * `auto` follows the registry: a poster type gets the full-bleed portrait,
+		 * everything else gets whatever `EntityIdentity` draws beside the title.
+		 * Override to force the poster treatment, or to drop the media entirely.
 		 */
-		media?: 'auto' | 'avatar' | 'poster' | 'icon' | 'none';
+		media?: 'auto' | 'poster' | 'none';
 		status?: boolean;
 		class?: string;
 		/** A `DefinitionList` of the facts worth showing at this size. */
@@ -50,28 +49,8 @@
 		children?: Snippet;
 	} = $props();
 
-	const viewer = getEntityViewer();
-	const href = $derived(entityHref(ref, viewer));
 	const kind = $derived(entityKinds[ref.type]);
 	const Icon = $derived(entityIcon(ref).icon);
-
-	/**
-	 * `icon` is the no-image answer at every shape.
-	 *
-	 * A card is big enough that the fallback has to *say* something, and initials
-	 * on a generated pattern say the least: two letters repeating the title
-	 * printed right beside them. Most of these types have no image at all — a
-	 * reservation, a report, a campaign — so the glyph is not a fallback for them
-	 * but the only honest illustration, which is why `auto` reaches for it rather
-	 * than dropping the media slot.
-	 */
-	const mode = $derived.by(() => {
-		if (media !== 'auto') return media === 'none' ? 'none' : media;
-		if (!ref.image) return 'icon';
-		if (kind.shape === 'poster') return 'poster';
-		if (kind.shape === 'none') return 'icon';
-		return 'avatar';
-	});
 
 	/**
 	 * A poster type turns the whole card portrait: full-bleed 2:3 artwork with
@@ -82,7 +61,6 @@
 	 * artwork yet is still a portrait card and a grid of them stays even.
 	 */
 	const isPoster = $derived(media === 'poster' || (media === 'auto' && kind.shape === 'poster'));
-	const tileClass = $derived(kind.shape === 'round' ? 'rounded-full' : 'rounded-lg');
 	const poster = $derived(ref.image ? imageSrc(ref.image, 'poster') : null);
 
 	/**
@@ -99,16 +77,11 @@
 	// Exception-only, like subtypes: an `active` member or a `published` listing
 	// is in its expected state and gets no mark at all.
 	const notable = $derived(status && isNoteworthyStatus(ref.status));
-	const inMedia = $derived(notable && mode !== 'none');
-	const ringClass = $derived.by(() => {
-		if (!inMedia) return '';
-		// 4px on a poster, 2px on a tile — the same width reads very differently
-		// against a ~230px poster edge than around a 56px avatar, where it would
-		// go back to shouting. Both spelled literally: Tailwind only emits classes
-		// it can see in source.
-		const width = isPoster ? 'ring-4' : 'ring-2';
-		return `${width} ${toneFor(ref.status)?.ring ?? ''}`;
-	});
+	// Only the poster carries status here; every other shape hands it to
+	// `EntityIdentity`, which rides it on the avatar. 4px because a ~230px poster
+	// edge swallows the 2px an avatar wears.
+	const inMedia = $derived(notable && isPoster);
+	const ringClass = $derived(inMedia ? `ring-4 ${toneFor(ref.status)?.ring ?? ''}` : '');
 </script>
 
 <Card class={className}>
@@ -149,63 +122,16 @@
 		</div>
 	{/if}
 	<CardBody>
-		<div class="flex min-w-0 items-start gap-3">
-			<!-- On a poster card the artwork is above, so nothing sits beside the title. -->
-			{#if !isPoster && mode !== 'none'}
-				<div class="relative shrink-0">
-					{#if mode === 'avatar'}
-						<EntityAvatar
-							shape={kind.shape === 'round' ? 'round' : 'square'}
-							name={ref.title}
-							image={ref.image}
-							size="avatar-md"
-							class="size-14 {ringClass}"
-						/>
-					{:else}
-						<div
-							class="flex size-14 items-center justify-center bg-base-200 {tileClass} {ringClass}"
-							aria-hidden="true"
-						>
-							<Icon size={28} class="text-subtle" />
-						</div>
-					{/if}
-					{#if inMedia && ref.status}
-						<span
-							class="absolute -right-1 -bottom-1 flex size-6 items-center justify-center rounded-full bg-base-100"
-						>
-							<StatusBadge status={ref.status} size={19} />
-						</span>
-					{/if}
-				</div>
-			{/if}
-			<div class="min-w-0 flex-1">
-				<!--
-					The truncate lives on an inner <span>, not on the <h3>. `layout.css`
-					sets `text-wrap: balance` on h1–h6 *unlayered*, and unlayered CSS
-					beats every @layer — so no utility can win on the heading itself and
-					`truncate` silently half-applies (overflow and ellipsis take, nowrap
-					does not). Inherited values do lose to a direct declaration, which is
-					why the span works.
-				-->
-				<h3 class="font-semibold">
-					{#if href}
-						<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- href comes from entityHref(), which calls resolve() internally; the rule cannot trace it through the function -->
-						<a {href} class="block truncate hover:underline">{ref.title}</a>
-					{:else}
-						<span class="block truncate">{ref.title}</span>
-					{/if}
-				</h3>
-				{#if ref.subtitle}
-					<!-- A <div>, not a <p>: `layout.css` sets `text-wrap: pretty` on p
-					     unlayered, which defeats `truncate` the same way `balance` does on
-					     headings. EntityIdentity uses a <div> here for the same reason. -->
-					<div class="truncate text-muted">{ref.subtitle}</div>
-				{/if}
-			</div>
-			{#if notable && ref.status && !inMedia}
-				<StatusBadge status={ref.status} label />
-			{/if}
-		</div>
+		<!--
+			The identity is not re-implemented here. A card's name/avatar/subline is
+			the same object a row draws, and drawing it twice is what let the status
+			rule drift between them once already.
+
+			On a poster card both the media and the status are off: the artwork above
+			*is* this record's image, and repeating it as a squashed avatar under its
+			own poster is the one thing a poster card must not do.
+		-->
+		<EntityIdentity {ref} size="md" heading={3} avatar={!isPoster} status={!isPoster} />
 
 		{#if facts}{@render facts()}{/if}
 		{#if children}{@render children()}{/if}

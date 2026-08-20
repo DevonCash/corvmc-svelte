@@ -3,7 +3,14 @@
 	import type { EntityRef } from '$lib/types/entity';
 	import EntityAvatar from '../directory/EntityAvatar.svelte';
 	import StatusBadge from '../StatusBadge.svelte';
-	import { entityKinds, entityGlyph, hasSubtype, isNoteworthyStatus } from './registry';
+	import {
+		entityKinds,
+		entityGlyph,
+		entityIcon,
+		hasSubtype,
+		isNoteworthyStatus,
+		toneFor
+	} from './registry';
 	import { getEntityViewer } from './context';
 	import { entityHref } from '$lib/utils/entity-href';
 
@@ -36,6 +43,7 @@
 		status = false,
 		email,
 		phone,
+		heading,
 		link = size !== 'lg',
 		class: className = '',
 		qualifiers,
@@ -44,7 +52,11 @@
 	}: {
 		ref: EntityRef;
 		size?: 'sm' | 'md' | 'lg';
-		/** Defaults on for `md`/`lg`, and only for types that have an avatar shape. */
+		/**
+		 * The media slot. Defaults on above `sm`. Types with no avatar of their
+		 * own get their glyph on a tile instead of nothing — a reservation or a
+		 * report still deserves an anchor for the eye.
+		 */
 		avatar?: boolean;
 		status?: boolean;
 		/**
@@ -53,6 +65,11 @@
 		 */
 		email?: string | null;
 		phone?: string | null;
+		/**
+		 * Render the name inside a heading, for a card whose title is the record.
+		 * Omit in lists: fifty headings in a table is not an outline.
+		 */
+		heading?: 2 | 3 | 4;
 		/**
 		 * Defaults off at `lg`: that size is the strip on a record's own page, and
 		 * linking a record to the page you are already reading is a dead end. Pass
@@ -71,13 +88,32 @@
 	const viewer = getEntityViewer();
 	const href = $derived(link ? entityHref(ref, viewer) : null);
 	const kind = $derived(entityKinds[ref.type]);
-	const showAvatar = $derived(avatar ?? (size !== 'sm' && kind.shape !== 'none'));
+	const showMedia = $derived(avatar ?? size !== 'sm');
+	const hasAvatar = $derived(kind.shape !== 'none');
+	const Icon = $derived(entityIcon(ref).icon);
 	const hasContact = $derived(!!email || !!phone);
 	const hasSub = $derived(hasContact || !!subtitle || !!ref.subtitle);
 	const notableStatus = $derived(status && isNoteworthyStatus(ref.status));
 
 	const avatarSize = $derived(size === 'lg' ? 'size-16' : size === 'md' ? 'size-10' : 'size-6');
 	const titleSize = $derived(size === 'lg' ? 'text-lg' : '');
+
+	/**
+	 * Status rides the avatar when there is one — a ring in its tone and the
+	 * glyph in the corner — and only falls back to a separate element when there
+	 * is nothing to ride.
+	 *
+	 * One treatment, so the same record does not report its state one way in a
+	 * list and another on a card. Where no avatar exists (a reservation, a
+	 * report, or the bare table cell) the status becomes its own mark: the word
+	 * at `lg`, where there is one record on the page and room to name it, and the
+	 * glyph at the smaller sizes.
+	 */
+	const onAvatar = $derived(notableStatus && showMedia);
+	const ringClass = $derived(onAvatar ? `ring-2 ${toneFor(ref.status)?.ring ?? ''}` : '');
+	const markSize = $derived(size === 'lg' ? 'size-6' : 'size-5');
+	const tileRadius = $derived(kind.shape === 'round' ? 'rounded-full' : 'rounded-lg');
+	const iconSize = $derived(size === 'lg' ? 30 : 20);
 
 	// Marked variants only — a plain member, a self-booked reservation and a CMC
 	// show all resolve to nothing here, because a glyph on every row marks
@@ -100,15 +136,32 @@
 	{/if}{ref.title}
 {/snippet}
 
+{#snippet titleText()}
+	{#if href}
+		<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- href comes from entityHref(), which calls resolve() internally; the rule cannot trace it through the function -->
+		<a {href} class="block min-w-0 truncate font-medium hover:underline {heading ? '' : titleSize}"
+			>{@render titleLine()}</a
+		>
+	{:else}
+		<span class="block min-w-0 truncate font-medium {heading ? '' : titleSize}"
+			>{@render titleLine()}</span
+		>
+	{/if}
+{/snippet}
+
 {#snippet titleRow()}
 	<div class="flex flex-wrap items-baseline gap-2">
-		{#if href}
-			<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- href comes from entityHref(), which calls resolve() internally; the rule cannot trace it through the function -->
-			<a {href} class="min-w-0 truncate font-medium hover:underline {titleSize}"
-				>{@render titleLine()}</a
-			>
+		{#if heading}
+			<!--
+				`truncate` on the inner element, never on the heading: `layout.css`
+				sets `text-wrap: balance` on h1–h6 unlayered, and unlayered CSS beats
+				every @layer, so nowrap silently fails to apply there.
+			-->
+			<svelte:element this={`h${heading}`} class="min-w-0 font-semibold {titleSize}">
+				{@render titleText()}
+			</svelte:element>
 		{:else}
-			<span class="min-w-0 truncate font-medium {titleSize}">{@render titleLine()}</span>
+			{@render titleText()}
 		{/if}
 		{#if ref.type === 'member' && ref.pronouns}
 			<!-- Narrowing the union to read a field only one arm has, which is not
@@ -118,15 +171,13 @@
 			<span class="text-muted">{ref.pronouns}</span>
 		{/if}
 		{#if qualifiers}{@render qualifiers()}{/if}
-		{#if size === 'lg' && notableStatus && ref.status}
-			<!-- A header has room for the word, and there is exactly one record on
-			     the page to say it about. Rows get the glyph. -->
+		{#if size === 'lg' && notableStatus && !onAvatar && ref.status}
 			<StatusBadge status={ref.status} label />
 		{/if}
 	</div>
 {/snippet}
 
-{#if size === 'sm' && !showAvatar}
+{#if size === 'sm' && !showMedia}
 	<!--
 		NO WRAPPER. `cell-primary` is `width:100%; max-width:0`, and `truncate`
 		only resolves against that when the anchor is a *direct* block child of
@@ -149,17 +200,37 @@
 	{/if}
 {:else}
 	<div class="flex min-w-0 items-center {size === 'lg' ? 'gap-4' : 'gap-3'} {className}">
-		{#if size !== 'lg' && notableStatus && ref.status}
+		{#if size !== 'lg' && notableStatus && !onAvatar && ref.status}
 			<StatusBadge status={ref.status} />
 		{/if}
-		{#if showAvatar}
-			<EntityAvatar
-				shape={kind.shape === 'round' ? 'round' : 'square'}
-				name={ref.title}
-				image={ref.image}
-				size={size === 'lg' ? 'avatar-md' : 'avatar-sm'}
-				class="{avatarSize} shrink-0"
-			/>
+		{#if showMedia}
+			<div class="relative shrink-0">
+				{#if hasAvatar}
+					<EntityAvatar
+						shape={kind.shape === 'round' ? 'round' : 'square'}
+						name={ref.title}
+						image={ref.image}
+						size={size === 'lg' ? 'avatar-md' : 'avatar-sm'}
+						class="{avatarSize} {ringClass}"
+					/>
+				{:else}
+					<!-- No avatar of its own, so the glyph at size. Initials would only
+					     spell out two letters of the name printed beside them. -->
+					<div
+						class="flex {avatarSize} items-center justify-center bg-base-200 {tileRadius} {ringClass}"
+						aria-hidden="true"
+					>
+						<Icon size={iconSize} class="text-subtle" />
+					</div>
+				{/if}
+				{#if onAvatar && ref.status}
+					<span
+						class="absolute -right-1 -bottom-1 flex {markSize} items-center justify-center rounded-full bg-base-100"
+					>
+						<StatusBadge status={ref.status} size={size === 'lg' ? 19 : 16} />
+					</span>
+				{/if}
+			</div>
 		{/if}
 		<div class="min-w-0 flex-1">
 			{@render titleRow()}
