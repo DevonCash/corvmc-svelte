@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { EntityRef } from '$lib/types/entity';
-	import { entityKinds } from './registry';
+	import { entityGlyph } from './registry';
 	import { getEntityViewer } from './context';
 	import { entityHref } from '$lib/utils/entity-href';
 
@@ -34,7 +34,7 @@
 
 	const viewer = getEntityViewer();
 	const href = $derived(entityHref(ref, viewer));
-	const Icon = $derived(entityKinds[ref.type].icon);
+	const Icon = $derived(entityGlyph(ref).icon);
 </script>
 
 {#if href}

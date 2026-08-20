@@ -46,14 +46,20 @@ interface BaseRef {
 	 * simply has fewer reachable pages rather than a broken link.
 	 */
 	slug?: string | null;
+	/**
+	 * Which variant of its type this is — `sustaining` for a member, `community`
+	 * for an event. Resolved to a glyph by `entityGlyph()`.
+	 *
+	 * Only ever set for the *marked* cases. A plain member, a member's own
+	 * booking, a CMC show: all leave this null and get no marker, because a glyph
+	 * on every row marks nothing.
+	 */
+	subtype?: string | null;
 }
 
 export interface MemberRef extends BaseRef {
 	type: 'member';
 	pronouns?: string | null;
-	role?: string | null;
-	/** Derived from the subscription snapshot, not from `role`. */
-	sustaining?: boolean | null;
 }
 
 export interface BandRef extends BaseRef {

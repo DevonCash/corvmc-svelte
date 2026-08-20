@@ -25,6 +25,36 @@
 		args: { ref: fakeRef('member', { id: 'm1' }) }
 	});
 
+	// Left column is the ordinary case, deliberately unmarked.
+	const subtypeSets = [
+		{
+			type: 'member' as const,
+			rows: [
+				[null, 'Jane Doe'],
+				['sustaining', 'Ada Lovelace'],
+				['staff', 'Justin Sheetz'],
+				['admin', 'Devon Cash']
+			]
+		},
+		{
+			type: 'reservation' as const,
+			rows: [
+				[null, 'Mar 14, 7:00–9:00 PM'],
+				['band', 'Mar 15, 6:00–8:00 PM'],
+				['event', 'Mar 16, 5:00–11:00 PM'],
+				['lesson', 'Mar 17, 4:00–5:00 PM']
+			]
+		},
+		{
+			type: 'event' as const,
+			rows: [
+				[null, 'Basement Show: Loud Night'],
+				['band', 'The Velvet Underground live'],
+				['community', 'Open Mic at the Library']
+			]
+		}
+	];
+
 	const members = [
 		fakeRef('member', { id: 'm1' }),
 		fakeRef('member', {
@@ -152,3 +182,25 @@
 	</div>
 {/snippet}
 <Story name="Unlinked states" template={unlinked} />
+
+<!--
+	Subtypes are exception-only. The first row of each group is the ordinary case
+	and carries no glyph on purpose — `user` for a reservation and `cmc` for an
+	event are as unmarked as a plain member. A marker on every row marks nothing.
+	Hover a glyph for its label.
+-->
+{#snippet subtypes()}
+	<div class="flex flex-col gap-6">
+		{#each subtypeSets as set (set.type)}
+			<div>
+				<p class="mb-2 text-subtle">{set.type}</p>
+				<div class="flex max-w-md flex-col gap-1">
+					{#each set.rows as [subtype, title] (title)}
+						<EntityRow ref={fakeRef(set.type, { id: title, subtype, title })} />
+					{/each}
+				</div>
+			</div>
+		{/each}
+	</div>
+{/snippet}
+<Story name="Subtypes — marked variants only" template={subtypes} />

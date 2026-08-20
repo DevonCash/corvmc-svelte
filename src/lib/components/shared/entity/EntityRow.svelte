@@ -3,10 +3,9 @@
 	import type { EntityRef } from '$lib/types/entity';
 	import EntityAvatar from '../directory/EntityAvatar.svelte';
 	import StatusBadge from '../StatusBadge.svelte';
-	import { entityKinds } from './registry';
+	import { entityKinds, entityGlyph, hasSubtype } from './registry';
 	import { getEntityViewer } from './context';
 	import { entityHref } from '$lib/utils/entity-href';
-	import { IconUserCog, IconUserShield, IconUserHeart } from '@tabler/icons-svelte';
 
 	/**
 	 * One record as a list item: its name, its single closest qualifier, and
@@ -51,23 +50,16 @@
 	const showAvatar = $derived(avatar ?? (size === 'md' && kind.shape !== 'none'));
 	const hasSub = $derived(!!subtitle || !!ref.subtitle);
 
-	// The one permitted per-type branch in this component. A member's
-	// admin/staff/sustaining glyph is a fact about the *record*, not about its
-	// type, so it cannot move into the registry. If a second branch ever appears
-	// here, the registry is missing a field — go add it there instead.
-	const roleIcon = $derived.by(() => {
-		if (ref.type !== 'member') return null;
-		if (ref.role === 'admin') return { Icon: IconUserCog, label: 'admin' };
-		if (ref.role === 'staff') return { Icon: IconUserShield, label: 'staff' };
-		if (ref.sustaining) return { Icon: IconUserHeart, label: 'sustaining member' };
-		return null;
-	});
+	// Marked variants only — a plain member, a self-booked reservation and a CMC
+	// show all resolve to nothing here, because a glyph on every row marks
+	// nothing. Which cases count is a registry fact, not a branch in this file.
+	const glyph = $derived(hasSubtype(ref) ? entityGlyph(ref) : null);
 </script>
 
 {#snippet title()}
-	{#if roleIcon}
-		<span class="tooltip mr-1 align-middle" data-tip={roleIcon.label}>
-			<roleIcon.Icon size={14} />
+	{#if glyph}
+		<span class="tooltip mr-1 align-middle" data-tip={glyph.label}>
+			<glyph.icon size={14} />
 		</span>
 	{/if}{ref.title}
 {/snippet}

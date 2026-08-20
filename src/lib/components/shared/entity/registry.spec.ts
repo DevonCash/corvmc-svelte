@@ -1,7 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { entityKinds, statusRing } from './registry';
+import { entityKinds, statusRing, entityGlyph, hasSubtype } from './registry';
 import { entityTypes, entityLabels, flagEntityTypeToEntity, type EntityType } from '$lib/config';
 import { flagEntityTypes } from '$lib/server/db/schema/flag';
+import { eventSources } from '$lib/server/db/schema/event';
+import { bookerTypes } from '$lib/server/db/schema/reservation';
+import { fakeRef } from '$lib/test/fixtures';
 import { variants } from '../StatusBadge.svelte';
 
 /**
@@ -88,5 +91,51 @@ describe('entity registry', () => {
 		const colours = [...new Set(Object.values(variants).map((v) => v.color))];
 		const missing = colours.filter((c) => !(c in statusRing));
 		expect(missing, `add these to statusRing: ${missing.join(', ')}`).toEqual([]);
+	});
+
+	/**
+	 * Subtypes are exception-only: the ordinary case is deliberately absent so
+	 * it gets no marker. That makes "is it missing on purpose?" a real question,
+	 * so each vocabulary names its unmarked value explicitly here.
+	 */
+	describe('subtypes', () => {
+		it.each([
+			['event', eventSources, ['cmc']],
+			['reservation', bookerTypes, ['user']]
+		] as const)('covers every %s value except the ordinary one', (type, vocabulary, unmarked) => {
+			const declared = entityKinds[type].subtypes ?? {};
+			const expected = vocabulary.filter((v) => !unmarked.includes(v as never)).sort();
+			expect(Object.keys(declared).sort()).toEqual([...expected]);
+		});
+
+		it('gives every subtype its own glyph within its type', () => {
+			for (const type of entityTypes) {
+				const subtypes = entityKinds[type].subtypes;
+				if (!subtypes) continue;
+				// Against each other *and* against the type's own default, so a
+				// marked record never looks identical to an unmarked one.
+				const icons = [entityKinds[type].icon, ...Object.values(subtypes).map((s) => s.icon)];
+				expect(new Set(icons).size, `${type} reuses a glyph across its subtypes`).toBe(
+					icons.length
+				);
+			}
+		});
+
+		it('falls back to the type glyph for an unmarked or unknown subtype', () => {
+			const plain = entityGlyph(fakeRef('member', { subtype: null }));
+			expect(plain.icon).toBe(entityKinds.member.icon);
+			expect(hasSubtype(fakeRef('member', { subtype: null }))).toBe(false);
+			// An unrecognised value must not blank the glyph.
+			expect(entityGlyph(fakeRef('member', { subtype: 'nonsense' })).icon).toBe(
+				entityKinds.member.icon
+			);
+			expect(hasSubtype(fakeRef('member', { subtype: 'nonsense' }))).toBe(false);
+		});
+
+		it('resolves a marked record to its own glyph', () => {
+			const sustaining = entityGlyph(fakeRef('member', { subtype: 'sustaining' }));
+			expect(sustaining.icon).toBe(entityKinds.member.subtypes!.sustaining.icon);
+			expect(sustaining.label).toBe('Sustaining member');
+		});
 	});
 });

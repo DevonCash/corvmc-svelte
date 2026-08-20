@@ -57,10 +57,27 @@ describe('EntityRow', () => {
 		);
 	});
 
-	it('marks up a sustaining member with the role glyph', async () => {
-		render(Harness, { ref: fakeRef('member', { id: 'm1', sustaining: true }) });
-		const tip = document.querySelector('[data-tip]');
-		expect(tip?.getAttribute('data-tip')).toBe('sustaining member');
+	it('marks a subtype with its glyph and label', async () => {
+		render(Harness, { ref: fakeRef('member', { id: 'm1', subtype: 'sustaining' }) });
+		expect(document.querySelector('[data-tip]')?.getAttribute('data-tip')).toBe(
+			'Sustaining member'
+		);
+	});
+
+	/**
+	 * Subtypes are exception-only. If the ordinary case ever picks up a glyph,
+	 * every row in the app gets one and the marker stops meaning anything —
+	 * which is the whole reason `user` and `cmc` are absent from the registry.
+	 */
+	it('leaves the ordinary case unmarked', async () => {
+		render(Harness, { ref: fakeRef('member', { id: 'm1', subtype: null }) });
+		expect(document.querySelector('[data-tip]')).toBeNull();
+	});
+
+	it('leaves an unrecognised subtype unmarked rather than blank', async () => {
+		render(Harness, { ref: fakeRef('member', { id: 'm1', subtype: 'nonsense' }) });
+		expect(document.querySelector('[data-tip]')).toBeNull();
+		expect(document.querySelector('td.cell-primary > a')?.textContent).toContain('Jane Doe');
 	});
 
 	/** The md shape is a flex row, so a wrapper here is correct, not a bug. */

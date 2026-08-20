@@ -30,12 +30,21 @@ import {
 	IconClock,
 	IconHeartHandshake,
 	IconRepeat,
-	IconHelp
+	IconHelp,
+	IconCrown,
+	IconShield,
+	IconHeart,
+	IconMusic,
+	IconSchool,
+	IconBuildingCommunity
 } from '@tabler/icons-svelte';
 import type { SvelteComponent } from 'svelte';
-import { entityTypes, type EntityType } from '$lib/config';
+import { entityTypes, entityLabels, type EntityType } from '$lib/config';
+import type { EntityRef } from '$lib/types/entity';
 
 type IconComponent = typeof SvelteComponent<any>;
+
+export type EntitySubtype = { icon: IconComponent; label: string };
 
 export type EntityKind = {
 	icon: IconComponent;
@@ -49,13 +58,63 @@ export type EntityKind = {
 	 * the glyph instead.
 	 */
 	shape: 'round' | 'square' | 'poster' | 'none';
+	/**
+	 * Kinds *within* a type that are worth telling apart at a glance — a
+	 * sustaining member against a plain one, a band's show against the org's.
+	 *
+	 * **Exception-only, and that is the whole design.** The ordinary case is
+	 * deliberately absent here, so it gets no marker: `user` is missing from
+	 * reservation and `cmc` from event for the same reason `member` is missing
+	 * from member. A glyph on every row marks nothing. This is the rule
+	 * `MemberLink` already followed for roles and
+	 * `staff/reservations/+page.svelte` already followed with its
+	 * `bookerType !== 'user'` guard; it is now stated once instead of at each
+	 * call site.
+	 */
+	subtypes?: Record<string, EntitySubtype>;
 };
 
 export const entityKinds: Record<EntityType, EntityKind> = {
-	member: { icon: IconUser, shape: 'round' },
+	member: {
+		icon: IconUser,
+		shape: 'round',
+		// An explicit staff role outranks a subscription: someone can be both, and
+		// which one you need to know about depends on why you are looking — but
+		// staff is the one that changes what they can do to the record in front of
+		// you. `memberSubtype()` encodes that precedence.
+		// Distinct silhouettes, not three variants of a person. `MemberLink` used
+		// user-cog / user-shield / user-heart, which at the 14px these render at
+		// are one shape with an indistinguishable speck attached — the glyph has
+		// to be legible at a glance or it is only decoration.
+		subtypes: {
+			admin: { icon: IconCrown, label: 'Admin' },
+			staff: { icon: IconShield, label: 'Staff' },
+			sustaining: { icon: IconHeart, label: 'Sustaining member' }
+		}
+	},
 	band: { icon: IconUsersGroup, shape: 'square' },
-	event: { icon: IconCalendarEvent, shape: 'poster' },
-	reservation: { icon: IconMetronome, shape: 'none' },
+	event: {
+		icon: IconCalendarEvent,
+		shape: 'poster',
+		// `cmc` is absent on purpose — the collective's own show is the default,
+		// and marking it would mark almost everything.
+		subtypes: {
+			band: { icon: IconMusic, label: "A band's show" },
+			community: { icon: IconBuildingCommunity, label: 'Community listing' }
+		}
+	},
+	reservation: {
+		icon: IconMetronome,
+		shape: 'none',
+		// `user` is absent: a member booking for themselves is the ordinary case.
+		// `lesson` is present because `BookerTypeIcon` silently rendered *nothing*
+		// for it — the one booker type with no glyph at all.
+		subtypes: {
+			band: { icon: IconMusic, label: 'Booked by a band' },
+			event: { icon: IconCalendarEvent, label: 'Held for an event' },
+			lesson: { icon: IconSchool, label: 'Lesson' }
+		}
+	},
 	suggestion: { icon: IconBulb, shape: 'none' },
 	thread: { icon: IconMessages, shape: 'none' },
 	flag: { icon: IconFlag, shape: 'none' },
@@ -96,3 +155,23 @@ export const statusRing: Record<string, string> = {
 	'text-base-content/60': 'ring-base-content/30',
 	'text-base-content/40': 'ring-base-content/30'
 };
+
+/**
+ * The glyph and label for one record: its subtype's if it has one, otherwise
+ * its type's.
+ *
+ * Components call this instead of reaching for `kind.icon`, so "which variant
+ * of this thing is it" stays a registry fact. `EntityRow` used to carry a
+ * hardcoded member-role branch with a comment saying a second branch would mean
+ * the registry was missing a field — this is that field.
+ */
+export function entityGlyph(ref: EntityRef): EntitySubtype {
+	const kind = entityKinds[ref.type];
+	const sub = ref.subtype ? kind.subtypes?.[ref.subtype] : undefined;
+	return sub ?? { icon: kind.icon, label: entityLabels[ref.type].one };
+}
+
+/** True when this record is a marked variant rather than the ordinary case. */
+export function hasSubtype(ref: EntityRef): boolean {
+	return !!ref.subtype && !!entityKinds[ref.type].subtypes?.[ref.subtype];
+}
