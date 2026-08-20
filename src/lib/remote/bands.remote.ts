@@ -9,7 +9,7 @@ import { user } from '$lib/server/db/schema/authentication';
 import { eq, and, desc, gt, ne } from 'drizzle-orm';
 import { requireStaff, requireUser } from '$lib/server/authorization';
 import { listAll, listForUser } from '$lib/server/band/band-service';
-import { resolveImageUrl } from '$lib/server/storage';
+import { toBandRef } from '$lib/server/entity/refs';
 import {
 	getByIdWithDetails,
 	getMembers,
@@ -584,5 +584,13 @@ export const getUserBands = query(z.string(), async (userId) => {
 	// listForUser is unfiltered by status, so pending invitations come through
 	// too — a staff member needs to see an invite that was never accepted.
 	const bands = await listForUser(userId);
-	return bands.map((b) => ({ ...b, avatarUrl: resolveImageUrl(b.avatarKey) }));
+	return bands.map((b) => ({
+		...b,
+		// The member count is what qualifies a band in this list, so it takes the
+		// ref's subline rather than a column of its own.
+		ref: {
+			...toBandRef({ ...b, image: b.avatarKey }),
+			subtitle: `${b.memberCount} active members`
+		}
+	}));
 });

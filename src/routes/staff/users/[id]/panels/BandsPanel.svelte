@@ -7,7 +7,7 @@
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
 	import Badge from '$lib/components/shared/Badge.svelte';
-	import Avatar from '$lib/components/shared/Avatar.svelte';
+	import { EntityChip, EntityIdentity } from '$lib/components/shared/entity';
 	import { rowLink } from '$lib/actions/row-link';
 	import { resolve } from '$app/paths';
 	import { formatDateShortYear } from '$lib/utils/format';
@@ -27,27 +27,16 @@
 		{:else}
 			<ul class="flex flex-col gap-2">
 				{#each bands as b (b.id)}
-					<li>
-						<a
-							href={resolve(`/staff/bands/${b.id}`)}
-							class="flex items-center gap-3 rounded-box px-2 py-2 hover:bg-base-200"
-						>
-							<!-- Band avatars are square; member avatars are round. -->
-							<Avatar
-								src={b.avatarUrl ?? undefined}
-								name={b.name}
-								size="avatar-sm"
-								class="size-10 !rounded"
-							/>
-							<div class="min-w-0 flex-1">
-								<div class="font-medium">{b.name}</div>
-								<div class="text-muted">{b.memberCount} active members</div>
-							</div>
-							<StatusBadge status={b.role} label />
-							{#if b.status !== 'active'}
-								<Badge variant="warning" size="sm">Invite pending</Badge>
-							{/if}
-						</a>
+					<li class="rounded-box px-2 py-2 hover:bg-base-200">
+						<!-- The square avatar is the registry's, not this list's. -->
+						<EntityIdentity ref={b.ref} size="md">
+							{#snippet meta()}
+								<StatusBadge status={b.role} label />
+								{#if b.status !== 'active'}
+									<Badge variant="warning" size="sm">Invite pending</Badge>
+								{/if}
+							{/snippet}
+						</EntityIdentity>
 					</li>
 				{/each}
 			</ul>
@@ -74,10 +63,10 @@
 				{/snippet}
 				{#each [...shows.upcoming, ...shows.past] as show (show.id)}
 					<tr class="hover" use:rowLink={resolve(`/staff/events/${show.id}`)}>
-						<td class="cell-primary">
-							<a class="font-medium" href={resolve(`/staff/events/${show.id}`)}>{show.title}</a>
-						</td>
-						<td class="col-support">{show.bandName}</td>
+						<td class="cell-primary"><EntityIdentity ref={show.ref} /></td>
+						<!-- The credited band is a record of its own, so it keeps its
+						     column and reaches its own page. -->
+						<td class="col-support"><EntityChip ref={show.band} icon={false} /></td>
 						<td class="col-extra whitespace-nowrap">{formatDateShortYear(show.startsAt)}</td>
 					</tr>
 				{/each}
@@ -106,10 +95,9 @@
 					<tr class="hover" use:rowLink={resolve(`/staff/events/${e.id}`)}>
 						<td class="w-px"><StatusBadge status={e.status} /></td>
 						<td class="cell-primary">
-							<a class="font-medium" href={resolve(`/staff/events/${e.id}`)}>{e.title}</a>
-							{#if e.reviewNotes}
-								<div class="text-muted">{e.reviewNotes}</div>
-							{/if}
+							<EntityIdentity ref={e.ref}>
+								{#snippet subtitle()}{e.reviewNotes}{/snippet}
+							</EntityIdentity>
 						</td>
 						<td class="col-extra whitespace-nowrap">{formatDateShortYear(e.startsAt)}</td>
 					</tr>
@@ -138,8 +126,9 @@
 					<tr class="hover" use:rowLink={resolve(`/staff/events/${t.eventId}`)}>
 						<td class="w-px"><StatusBadge status={t.status} /></td>
 						<td class="cell-primary">
-							<a class="font-medium" href={resolve(`/staff/events/${t.eventId}`)}>{t.eventTitle}</a>
-							<div class="text-muted">{t.code}</div>
+							<EntityIdentity ref={t.ref}>
+								{#snippet subtitle()}{t.code}{/snippet}
+							</EntityIdentity>
 						</td>
 						<td class="col-support">Ticket</td>
 						<td class="col-extra whitespace-nowrap">{formatDateShortYear(t.eventStartsAt)}</td>
@@ -148,9 +137,7 @@
 				{#each data.rsvps as r (r.id)}
 					<tr class="hover" use:rowLink={resolve(`/staff/events/${r.eventId}`)}>
 						<td class="w-px"><StatusBadge status={r.eventStatus} /></td>
-						<td class="cell-primary">
-							<a class="font-medium" href={resolve(`/staff/events/${r.eventId}`)}>{r.eventTitle}</a>
-						</td>
+						<td class="cell-primary"><EntityIdentity ref={r.ref} /></td>
 						<td class="col-support">RSVP</td>
 						<td class="col-extra whitespace-nowrap">{formatDateShortYear(r.startsAt)}</td>
 					</tr>

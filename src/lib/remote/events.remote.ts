@@ -3,6 +3,7 @@ import { error, invalid } from '@sveltejs/kit';
 import { query, form, getRequestEvent } from '$app/server';
 import { requireStaff, requireUser } from '$lib/server/authorization';
 import { listRsvpsForUser } from '$lib/server/event/rsvp-service';
+import { toBandRef, toEventRef } from '$lib/server/entity/refs';
 import {
 	create,
 	update,
@@ -19,6 +20,7 @@ import {
 	getEventLineup,
 	listMemberUpcomingShows,
 	listMemberPastShows,
+	type MemberShowRow,
 	countMemberPastShows
 } from '$lib/server/event/event-service';
 import {
@@ -1174,11 +1176,35 @@ export const getUserShows = query(z.string(), async (userId) => {
 		listMemberPastShows(userId, { limit: 5, offset: 0 }),
 		countMemberPastShows(userId)
 	]);
-	return { upcoming, past, pastCount };
+	// Projected here rather than in `listMemberShows`: the directory profile
+	// reads those same functions and is art-directed, so its rows keep their
+	// shape while the staff panel gets refs.
+	return { upcoming: upcoming.map(toShowRow), past: past.map(toShowRow), pastCount };
 });
+
+/** A show as the staff panel draws it: the event, and the band it credits. */
+function toShowRow(show: MemberShowRow) {
+	return {
+		...show,
+		ref: toEventRef({ ...show, image: show.posterKey }),
+		band: toBandRef({ id: show.bandId, name: show.bandName, slug: show.bandSlug })
+	};
+}
 
 export const getUserTicketsAndRsvps = query(z.string(), async (userId) => {
 	await requireStaff();
 	const [tickets, rsvps] = await Promise.all([getUserTickets(userId), listRsvpsForUser(userId)]);
-	return { tickets, rsvps };
+	// The row's own status is the ticket's or the RSVP's, which is not the
+	// event's — so the event ref carries no status here and the page keeps its
+	// status column.
+	return {
+		tickets: tickets.map((t) => ({
+			...t,
+			ref: toEventRef({ id: t.eventId, title: t.eventTitle, startsAt: t.eventStartsAt })
+		})),
+		rsvps: rsvps.map((r) => ({
+			...r,
+			ref: toEventRef({ id: r.eventId, title: r.eventTitle, startsAt: r.startsAt })
+		}))
+	};
 });
