@@ -4,6 +4,7 @@
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
+	import { EntityChip } from '$lib/components/shared/entity';
 	import Button from '$lib/components/shared/Button.svelte';
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
 	import { formatDate, formatTime, formatDuration } from '$lib/utils/format';
@@ -59,8 +60,8 @@
 									</p>
 									<p class="text-muted">
 										{formatDuration(res.startsAt, res.endsAt)}
-										{#if res.bookedByName}
-											&middot; Booked by {res.bookedByName}
+										{#if res.bookedBy.id}
+											&middot; Booked by <EntityChip ref={res.bookedBy} icon={false} />
 										{/if}
 										{#if res.notes}
 											&middot; {res.notes}

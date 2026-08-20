@@ -39,6 +39,7 @@ import {
 	bandRefColumns,
 	eventRefColumns,
 	memberRefColumns,
+	toBandRef,
 	toBookerRef,
 	toMemberRef
 } from '$lib/server/entity/refs';
@@ -183,7 +184,8 @@ export const getBandReservations = query(z.string(), async (slug) => {
 			startsAt: reservation.startsAt,
 			endsAt: reservation.endsAt,
 			notes: reservation.notes,
-			bookedByName: user.name
+			// Who booked it for the band. The `user` join is already here.
+			bookedBy: memberRefColumns()
 		})
 		.from(reservation)
 		.leftJoin(user, eq(user.id, reservation.createdByUserId))
@@ -204,7 +206,8 @@ export const getBandReservations = query(z.string(), async (slug) => {
 			startsAt: reservation.startsAt,
 			endsAt: reservation.endsAt,
 			notes: reservation.notes,
-			bookedByName: user.name
+			// Who booked it for the band. The `user` join is already here.
+			bookedBy: memberRefColumns()
 		})
 		.from(reservation)
 		.leftJoin(user, eq(user.id, reservation.createdByUserId))
@@ -218,7 +221,11 @@ export const getBandReservations = query(z.string(), async (slug) => {
 		.orderBy(desc(reservation.startsAt))
 		.limit(SEARCH_LIMIT);
 
-	return { upcoming, past };
+	const withBooker = (r: (typeof upcoming)[number]) => ({
+		...r,
+		bookedBy: toMemberRef(r.bookedBy)
+	});
+	return { upcoming: upcoming.map(withBooker), past: past.map(withBooker) };
 });
 
 export const getStaffReservationDetail = query(z.string(), async (id) => {
@@ -262,6 +269,11 @@ export const getStaffReservationDetail = query(z.string(), async (id) => {
 		bandId: rows[0].bandId,
 		bandName: rows[0].bandName,
 		bandSlug: rows[0].bandSlug,
+		// The booking band as a record. `bandId`/`bandName` stay for the header
+		// action and the page title, which are not references.
+		band: rows[0].bandId
+			? toBandRef({ id: rows[0].bandId, name: rows[0].bandName, slug: rows[0].bandSlug })
+			: null,
 		createdByStaffName
 	};
 

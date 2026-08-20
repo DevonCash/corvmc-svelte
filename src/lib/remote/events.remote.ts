@@ -3,7 +3,7 @@ import { error, invalid } from '@sveltejs/kit';
 import { query, form, getRequestEvent } from '$app/server';
 import { requireStaff, requireUser } from '$lib/server/authorization';
 import { listRsvpsForUser } from '$lib/server/event/rsvp-service';
-import { toBandRef, toEventRef } from '$lib/server/entity/refs';
+import { bandRefColumns, toBandRef, toEventRef } from '$lib/server/entity/refs';
 import {
 	create,
 	update,
@@ -425,10 +425,22 @@ export const getStaffEvents = query(
 	}),
 	async (filters) => {
 		await requireStaff();
-		return listAllEvents(
+		const { rows, pagination } = await listAllEvents(
 			{ source: filters.source, status: filters.status },
 			{ page: filters.page ?? 1, pageSize: 50 }
 		);
+		return {
+			rows: rows.map((e) => ({
+				...e,
+				// The listing's own status is the row's and keeps its column, so the
+				// ref carries none — two marks for one fact reads as two facts.
+				ref: toEventRef({ id: e.id, title: e.title, startsAt: e.startsAt }),
+				// `event.bandId` is who manages the listing; the left join is already
+				// here for the byline.
+				band: toBandRef({ id: e.bandId, name: e.bandName, slug: e.bandSlug })
+			})),
+			pagination
+		};
 	}
 );
 
@@ -449,11 +461,11 @@ export const getStaffEventDetail = query(z.string(), async (id) => {
 	let bookingBand: { id: string; name: string; slug: string } | null = null;
 	if (evt.bandId) {
 		const [row] = await db
-			.select({ id: band.id, name: band.name, slug: band.slug })
+			.select(bandRefColumns())
 			.from(band)
 			.where(eq(band.id, evt.bandId))
 			.limit(1);
-		if (row) bookingBand = row;
+		if (row) bookingBand = { id: row.id, name: row.name, slug: row.slug };
 	}
 
 	let linkedReservation: { id: string; status: string; startsAt: Date; endsAt: Date } | null = null;
@@ -528,6 +540,8 @@ export const getStaffEventDetail = query(z.string(), async (id) => {
 			externalTicketUrl: evt.externalTicketUrl
 		},
 		band: bookingBand,
+		/** The same band, ready to render. `band` stays for the fields the form reads. */
+		bandRef: bookingBand ? toBandRef(bookingBand) : null,
 		posterUrl,
 		creator,
 		// Standing only matters for a community listing, and only staff see it.

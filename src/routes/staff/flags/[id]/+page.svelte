@@ -5,6 +5,7 @@
 	import PageHeader from '$lib/components/shared/PageHeader.svelte';
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import InfoCard from '$lib/components/shared/InfoCard.svelte';
+	import { EntityChip } from '$lib/components/shared/entity';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 	import Button from '$lib/components/shared/Button.svelte';
 	import Action from '$lib/components/shared/Action.svelte';
@@ -128,10 +129,8 @@
 					{/if}
 
 					<Fact label="By">
-						{#if flag.eventContext.band}
-							<a class="link" href={resolve(`/directory/bands/${flag.eventContext.band.slug}`)}>
-								{flag.eventContext.band.name}
-							</a>
+						{#if flag.eventBandRef}
+							<EntityChip ref={flag.eventBandRef} />
 						{:else}
 							CMC
 						{/if}

@@ -14,7 +14,6 @@
 		RefundReservationAction
 	} from '$lib/components/shared/actions';
 	import DayTimeline from '$lib/components/shared/reservations/DayTimeline.svelte';
-	import BookerTypeIcon from '$lib/components/shared/reservations/BookerTypeIcon.svelte';
 	import RecordNav from '$lib/components/shared/RecordNav.svelte';
 	import CopyableId from '$lib/components/shared/CopyableId.svelte';
 	import InfoCard from '$lib/components/shared/InfoCard.svelte';
@@ -24,7 +23,7 @@
 		durationHours as calcDurationHours,
 		formatCents
 	} from '$lib/utils/format';
-	import { EntityIdentity } from '$lib/components/shared/entity';
+	import { EntityChip, EntityIdentity } from '$lib/components/shared/entity';
 	import Button from '$lib/components/shared/Button.svelte';
 	import {
 		visibleActions,
@@ -165,11 +164,10 @@
 				</header>
 			{/snippet}
 			<div class="flex flex-col items-center">
-				{#if r.bookerType === 'band' && r.bandName}
-					<div class="mb-3 flex items-center gap-2">
-						<BookerTypeIcon type="band" size={18} />
-						<span class="text-lg font-medium">{r.bandName}</span>
-					</div>
+				{#if r.band}
+					<!-- The band holds the slot, so it leads; its glyph comes with the
+					     chip rather than from a booker-type icon beside it. -->
+					<div class="mb-3"><EntityChip ref={r.band} /></div>
 					<p class="mb-2 text-xs tracking-wide uppercase opacity-50">Booked by</p>
 				{/if}
 				<!-- `link`, unlike a detail page's own strip: the record here is the

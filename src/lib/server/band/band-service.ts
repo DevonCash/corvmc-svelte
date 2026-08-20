@@ -6,7 +6,7 @@ import { user } from '$lib/server/db/schema/authentication';
 import { reservation } from '$lib/server/db/schema/reservation';
 import { eq, and, ne, gt, sql, or, like, inArray, isNull, isNotNull, count } from 'drizzle-orm';
 import { paginate, type PaginationInput } from '$lib/server/db/paginate';
-import { memberRefColumns, toMemberRef } from '$lib/server/entity/refs';
+import { bandRefColumns, memberRefColumns, toBandRef, toMemberRef } from '$lib/server/entity/refs';
 import { generateSlug, ensureUniqueSlug } from '$lib/server/utils/slug';
 import { isReservedSlug } from '$lib/reserved-slugs';
 import { cancel as cancelReservation } from '$lib/server/reservation/reservation-service';
@@ -591,7 +591,9 @@ export async function listAll(
 			name: band.name,
 			slug: band.slug,
 			ownerId: band.ownerId,
-			ownerName: user.name,
+			// Two records per row: the band the row is, and the member who owns it.
+			ref: bandRefColumns(),
+			owner: memberRefColumns(),
 			tier: band.tier,
 			memberCount: sql<number>`(
 				select count(*) from band_member bm
@@ -612,7 +614,11 @@ export async function listAll(
 		.innerJoin(user, eq(user.id, band.ownerId))
 		.where(where);
 
-	return paginate(dataQ, countQ, pagination);
+	const { rows, pagination: page } = await paginate(dataQ, countQ, pagination);
+	return {
+		rows: rows.map((r) => ({ ...r, ref: toBandRef(r.ref), owner: toMemberRef(r.owner) })),
+		pagination: page
+	};
 }
 
 export async function getByIdWithDetails(bandId: string) {

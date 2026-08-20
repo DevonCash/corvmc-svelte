@@ -1,4 +1,5 @@
 import { db } from '$lib/server/db';
+import { toBandRef } from '$lib/server/entity/refs';
 import { DomainError } from '../domain-error';
 import { contentFlag } from '$lib/server/db/schema/flag';
 import type { FlagEntityType, FlagStatus } from '$lib/server/db/schema/flag';
@@ -625,6 +626,10 @@ export async function getFlag(flagId: string) {
 		entityLabel: entityLabel ?? '(deleted)',
 		entityHref: entityHref(row.flag.entityType, row.flag.entityId, flagId),
 		eventContext,
+		// The credited band as a record. The flagged *target* is still resolved by
+		// the page's own href map — that is the polymorphic case, and it is the
+		// next thing to fold onto a ref.
+		eventBandRef: eventContext?.band ? toBandRef(eventContext.band) : null,
 		threadContext
 	};
 }

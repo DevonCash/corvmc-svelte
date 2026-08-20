@@ -9,7 +9,7 @@ import { user } from '$lib/server/db/schema/authentication';
 import { eq, and, desc, gt, ne } from 'drizzle-orm';
 import { requireStaff, requireUser } from '$lib/server/authorization';
 import { listAll, listForUser } from '$lib/server/band/band-service';
-import { toBandRef } from '$lib/server/entity/refs';
+import { memberRefColumns, toBandRef, toMemberRef } from '$lib/server/entity/refs';
 import {
 	getByIdWithDetails,
 	getMembers,
@@ -132,14 +132,14 @@ export const getBandUpcoming = query(z.string(), async (bandId) => {
 	const { band } = await requireBandMember();
 	if (band.id !== bandId) error(403, 'Not authorized');
 	const now = new Date();
-	return db
+	const rows = await db
 		.select({
 			id: reservation.id,
 			status: reservation.status,
 			startsAt: reservation.startsAt,
 			endsAt: reservation.endsAt,
 			notes: reservation.notes,
-			bookedByName: user.name
+			bookedBy: memberRefColumns()
 		})
 		.from(reservation)
 		.leftJoin(user, eq(user.id, reservation.createdByUserId))
@@ -153,6 +153,8 @@ export const getBandUpcoming = query(z.string(), async (bandId) => {
 		)
 		.orderBy(reservation.startsAt)
 		.limit(10);
+
+	return rows.map((r) => ({ ...r, bookedBy: toMemberRef(r.bookedBy) }));
 });
 
 export const getBandMembersList = query(z.string(), async (bandId) => {
