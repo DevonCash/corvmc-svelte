@@ -21,6 +21,13 @@ export const SEED_OWNER_EMAIL = 'e2e.band.owner@example.com';
 export const SEED_OWNER_PASSWORD = 'e2e-password-123';
 export const SEED_OWNER_ID = 'e2e-band-owner';
 
+// A second, non-admin member of the members band. Needed to prove the band
+// reservation cancel policy from the outside: a bandmate who didn't book a
+// session must not be offered a Cancel button for it.
+export const SEED_BANDMATE_EMAIL = 'e2e.band.mate@example.com';
+export const SEED_BANDMATE_PASSWORD = 'e2e-password-123';
+export const SEED_BANDMATE_ID = 'e2e-band-mate';
+
 export const SEED_PUBLIC_BAND_ID = 'e2e-band-public';
 export const SEED_PUBLIC_BAND_SLUG = 'e2e-public-band';
 export const SEED_PUBLIC_BAND_NAME = 'E2E Public Band';
@@ -85,8 +92,10 @@ export async function seedBandOnboarding(): Promise<void> {
 			await db.delete(bandSlugHistory).where(eq(bandSlugHistory.bandId, bandId));
 			await db.delete(band).where(eq(band.id, bandId));
 		}
-		await db.delete(account).where(eq(account.userId, SEED_OWNER_ID));
-		await db.delete(user).where(eq(user.id, SEED_OWNER_ID));
+		for (const userId of [SEED_OWNER_ID, SEED_BANDMATE_ID]) {
+			await db.delete(account).where(eq(account.userId, userId));
+			await db.delete(user).where(eq(user.id, userId));
+		}
 
 		const now = new Date();
 		const passwordHash = await scryptHash(SEED_OWNER_PASSWORD);
@@ -105,6 +114,25 @@ export async function seedBandOnboarding(): Promise<void> {
 			accountId: SEED_OWNER_ID,
 			providerId: 'credential',
 			userId: SEED_OWNER_ID,
+			password: passwordHash,
+			createdAt: now,
+			updatedAt: now
+		});
+
+		await db.insert(user).values({
+			id: SEED_BANDMATE_ID,
+			name: 'E2E Bandmate',
+			email: SEED_BANDMATE_EMAIL,
+			emailVerified: true,
+			createdAt: now,
+			updatedAt: now
+		});
+
+		await db.insert(account).values({
+			id: 'e2e-band-mate-account',
+			accountId: SEED_BANDMATE_ID,
+			providerId: 'credential',
+			userId: SEED_BANDMATE_ID,
 			password: passwordHash,
 			createdAt: now,
 			updatedAt: now
@@ -198,5 +226,16 @@ export async function seedBandOnboarding(): Promise<void> {
 				createdAt: now
 			}))
 		);
+
+		// A plain member — not an admin — of one band, so a test can check what a
+		// bandmate is and isn't offered.
+		await db.insert(bandMember).values({
+			id: `${SEED_MEMBERS_BAND_ID}-mate`,
+			bandId: SEED_MEMBERS_BAND_ID,
+			userId: SEED_BANDMATE_ID,
+			role: 'member' as const,
+			status: 'active' as const,
+			createdAt: now
+		});
 	});
 }
