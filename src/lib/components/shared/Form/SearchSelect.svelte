@@ -55,7 +55,16 @@
 	<div class="flex items-center gap-2">
 		<div class="badge gap-2 badge-lg">
 			{value[labelKey]}
-			<Button type="button" variant="ghost" size="xs" shape="circle" onclick={clear}>✕</Button>
+			<!-- Named, because a bare ✕ is indistinguishable from the enclosing
+			     modal's own close button to a screen reader and to a test. -->
+			<Button
+				type="button"
+				variant="ghost"
+				size="xs"
+				shape="circle"
+				aria-label="Clear {value[labelKey]}"
+				onclick={clear}>✕</Button
+			>
 		</div>
 		{#if value[descriptionKey]}
 			<span class="text-muted">{value[descriptionKey]}</span>
@@ -72,8 +81,15 @@
 						query = (e.target as HTMLInputElement).value;
 					}}
 				/>
+				<!--
+					`flex-nowrap` is load bearing. daisyUI's `.menu` is `flex-flow: column
+					wrap`, so a capped height makes the list wrap into a *second column*
+					rather than scroll — and since `.menu` is also `width: fit-content`,
+					that column runs off the side of the popover where it cannot be
+					reached. Invisible until a search returns more than a few results.
+				-->
 				<Combobox.Content
-					class="menu z-10 max-h-40 w-full overflow-y-auto rounded-box bg-base-100 p-1 shadow-lg"
+					class="menu z-10 max-h-60 w-full flex-nowrap overflow-y-auto rounded-box bg-base-100 p-1 shadow-lg"
 					sideOffset={4}
 				>
 					{#each results as item (item.id)}
