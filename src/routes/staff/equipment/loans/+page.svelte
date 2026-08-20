@@ -7,6 +7,7 @@
 	import FilterBar from '$lib/components/shared/FilterBar.svelte';
 	import Select from '$lib/components/shared/Form/Select.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
+	import { EntityChip } from '$lib/components/shared/entity';
 	import Badge from '$lib/components/shared/Badge.svelte';
 	import { rowLink } from '$lib/actions/row-link';
 	import { resolve } from '$app/paths';
@@ -98,7 +99,7 @@
 							<a {href} class="block truncate font-medium hover:underline">
 								{l.equipmentName ?? '(free-form request)'}
 							</a>
-							<div class="truncate text-muted">{l.userName}</div>
+							<div class="truncate text-muted"><EntityChip ref={l.member} icon={false} /></div>
 						</td>
 						<td class="col-support whitespace-nowrap">
 							{l.dueDate ? formatDateShort(l.dueDate) : '—'}
