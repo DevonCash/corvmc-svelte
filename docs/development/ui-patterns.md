@@ -399,7 +399,83 @@ DaisyUI alert banner for inline messages, errors, and warnings. Not to be confus
 
 Props: `type` (`info`, `warning`, `error`, `success`), `href` (renders as `<a>` instead of `<div>`), `reset` (adds a Retry button), `action` (snippet for custom action content), `class`.
 
+## Entity tiers — chip / row / card / detail
+
+Four ways to show one record, in `$lib/components/shared/entity/`. Every reference to a record in
+the staff and member panels should be one of them.
+
+| Tier   | Component                      | Use                                                                     |
+| ------ | ------------------------------ | ----------------------------------------------------------------------- |
+| chip   | `EntityChip`                   | mentioning a record mid-sentence or in a `Fact`                         |
+| row    | `EntityRow`                    | a list item — `size="sm"` is the table primary cell, `md` has an avatar |
+| card   | `EntityCard`                   | a related record on someone else's detail page                          |
+| detail | `EntityHeader` + `RelatedList` | the identity strip and the related-records sections                     |
+
+All of them take a single `ref: EntityRef` (`$lib/types/entity`) and nothing about presentation.
+
+**Scope: the panels only.** The public site and the directory profiles keep their own art-directed
+set (`PosterCard`, `VinylCard`, `IdCard`, `GigList`, `directory/profile/*`). That line cuts across
+`member/` too: `member/events/**` and `member/directory/**` are art-directed routes. Don't
+"consistency-fix" one into the other — they optimise for different things.
+
+### Links are derived, never passed
+
+No component takes an `href`. `entityHref(ref, viewer)` picks the one canonical page for this
+record _and this viewer_: **stay in the panel you are already in, otherwise take the richest page
+they are entitled to** (staff → band → member → public). A staff user who is also in a band, clicking
+that band from inside its own panel, gets `/band/[slug]` rather than the staff record.
+
+`null` — no reachable page — is normal, not a failure: the components render unlinked but still
+visible, so a list keeps its length and a sentence keeps its subject.
+
+The viewer comes from `<EntityViewer panel=… >`, mounted once per panel layout. It is a separate
+synchronous component because the layouts already `await`, and context must be set during init.
+With no provider the viewer is anonymous, so links degrade to public routes — the harmless
+direction.
+
+This is display logic, not authorization. Remote functions remain the security boundary, so a
+mis-derived link is a 403, never a leak.
+
+### Everything visual is exception-only
+
+The same rule three times over, and it is the thing to preserve when extending any of this:
+
+- **Subtypes** — a glyph marks a member as `sustaining`, a listing as `community`, a booking as a
+  band's. The ordinary case (`member`, `cmc`, `user`) is deliberately absent from the registry and
+  gets no marker.
+- **Status** — `ordinaryStatuses` covers the expected resting states (all of `StatusBadge`'s success
+  tone, plus `confirmed` and `valid`). Only the rest draw a ring, a corner mark, or a trailing glyph.
+- **Identity vs qualifier** — `entityIcon()` is what kind of record this is, used where the glyph
+  stands alone (a chip's leading icon, a card's no-image fallback). `entityGlyph()` is which variant,
+  used only beside a name that already says what the record is.
+
+A marker on every row marks nothing, and the record that actually needs attention stops standing
+out — which is the only reason the marker exists.
+
+### Registry
+
+Per-type facts live in `entity/registry.ts` (glyph, avatar shape, subtypes) and `$lib/config`
+(`entityTypes`, `entityLabels`). Components must not branch on `ref.type`; a branch means the
+registry is missing a field. `registry.spec.ts` enforces coverage: every type drawn and named, no
+stale keys, identity glyphs unique across the registry, subtype glyphs unique within a type, every
+flag entity type mapped, and no success-toned status escaping `ordinaryStatuses`.
+
+### Things that will bite
+
+- **`truncate` does nothing on `<h1>`–`<h6>` or `<p>`.** `layout.css` sets `text-wrap: balance` and
+  `pretty` on them _unlayered_, and unlayered CSS beats every `@layer`, so `overflow` and `ellipsis`
+  apply but `white-space: nowrap` does not. Put the `truncate` on an inner `<span>`, or use a `<div>`.
+- **`EntityRow` in cell mode renders two sibling roots with no wrapper.** `cell-primary` is
+  `width:100%; max-width:0`, and truncation only resolves when the anchor is a direct block child.
+  Wrapping it silently un-truncates every list in the app; `EntityRow.svelte.spec.ts` pins it.
+- **Card actions ride the bottom edge** (`mt-5 h-0`, outside `CardBody`), matching
+  `member/reservations/ReservationCard.svelte`. Pass `size="xs"`.
+
 ## MemberLink
+
+**Superseded by `EntityRow` / `EntityChip`** — being removed as its call sites migrate. It hardcodes
+its target as `/staff/users/${userId}`, which is why every non-staff surface hand-rolled its own
+member link, and it takes a summary object that 16 of its 17 call sites build inline.
 
 Displays a member's name (linked to their staff profile) and email. Optional avatar with initials.
 
