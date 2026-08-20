@@ -133,7 +133,7 @@
 				<span
 					class="absolute right-2 bottom-2 flex size-7 items-center justify-center rounded-full bg-base-100 shadow"
 				>
-					<StatusBadge status={ref.status} size={16} />
+					<StatusBadge status={ref.status} size={22} />
 				</span>
 			{/if}
 		</div>
@@ -163,7 +163,7 @@
 						<span
 							class="absolute -right-1 -bottom-1 flex size-6 items-center justify-center rounded-full bg-base-100"
 						>
-							<StatusBadge status={ref.status} size={14} />
+							<StatusBadge status={ref.status} size={19} />
 						</span>
 					{/if}
 				</div>
