@@ -32,7 +32,6 @@ import {
 import { getBySlug, getById as getBandById } from '$lib/server/band/band-service';
 import { band } from '$lib/server/db/schema/band';
 import { formatDateInTz, buildDateInTz } from '$lib/server/reservation/timezone';
-import { resolveImageUrl } from '$lib/server/storage';
 import { describeFrequency, monthlyModeOf } from '$lib/server/reservation/rrule-helpers';
 import { isStaff, requireStaff, requireStaffOrOwner, requireUser } from '$lib/server/authorization';
 import { memberRefColumns, toMemberRef } from '$lib/server/entity/refs';
@@ -221,11 +220,8 @@ export const getStaffReservationDetail = query(z.string(), async (id) => {
 	const rows = await db
 		.select({
 			reservation: reservation,
-			memberName: user.name,
-			memberEmail: user.email,
+			member: memberRefColumns(),
 			memberPhone: user.phone,
-			memberPronouns: user.pronouns,
-			memberImage: user.image,
 			bandId: band.id,
 			bandName: band.name,
 			bandSlug: band.slug
@@ -251,11 +247,11 @@ export const getStaffReservationDetail = query(z.string(), async (id) => {
 
 	const row = {
 		...rows[0].reservation,
-		memberName: rows[0].memberName,
-		memberEmail: rows[0].memberEmail,
+		member: toMemberRef(rows[0].member),
+		// The two contact affordances the identity strip takes as props. Email is
+		// also the ref's subline, but the strip renders contact instead of it.
+		memberEmail: rows[0].member.email,
 		memberPhone: rows[0].memberPhone,
-		memberPronouns: rows[0].memberPronouns,
-		memberImage: resolveImageUrl(rows[0].memberImage),
 		bandId: rows[0].bandId,
 		bandName: rows[0].bandName,
 		bandSlug: rows[0].bandSlug,

@@ -38,7 +38,6 @@ See `docs/development/component-style-audit.md` for the visual audit run over th
 - [x] AccountDropdown
 - [ ] NotificationBell
 - [ ] TabBar
-- [ ] MemberLink
 - [ ] actions/CancelReservationAction (use `fakeForm`)
 - [ ] actions/AdjustCreditsAction
 - [ ] actions/CreateBandAction

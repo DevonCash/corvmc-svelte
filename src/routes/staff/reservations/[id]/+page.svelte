@@ -24,9 +24,8 @@
 		durationHours as calcDurationHours,
 		formatCents
 	} from '$lib/utils/format';
-	import Avatar from '$lib/components/shared/Avatar.svelte';
+	import { EntityIdentity } from '$lib/components/shared/entity';
 	import Button from '$lib/components/shared/Button.svelte';
-	import { IconMail, IconPhone } from '@tabler/icons-svelte';
 	import {
 		visibleActions,
 		reservationPaymentState,
@@ -173,23 +172,9 @@
 					</div>
 					<p class="mb-2 text-xs tracking-wide uppercase opacity-50">Booked by</p>
 				{/if}
-				<Avatar src={r.memberImage ?? undefined} name={r.memberName} class="size-16 mb-4" />
-				<h3 class="text-lg">{r.memberName}</h3>
-				{#if r.memberPronouns}
-					<p class="text-xs text-muted">{r.memberPronouns}</p>
-				{/if}
-				<div class="join join-vertical mt-4">
-					<Button href="mailto:{r.memberEmail}" variant="default" outline class="join-item">
-						<IconMail class="size-5" />
-						{r.memberEmail}
-					</Button>
-					{#if r.memberPhone}
-						<Button href="tel:{r.memberPhone}" variant="default" outline class="join-item">
-							<IconPhone class="size-5" />
-							{r.memberPhone}
-						</Button>
-					{/if}
-				</div>
+				<!-- `link`, unlike a detail page's own strip: the record here is the
+				     booking, and the member is a different record with its own page. -->
+				<EntityIdentity ref={r.member} size="lg" link email={r.memberEmail} phone={r.memberPhone} />
 			</div>
 		</InfoCard>
 

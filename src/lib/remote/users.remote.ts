@@ -219,6 +219,10 @@ export const getUser = query(z.string(), async (id) => {
 			pronouns: user.pronouns,
 			phone: user.phone,
 			image: user.image,
+			// The identity strip's ref. It re-reads columns this select already
+			// has, but the role/subscription precedence comes with it rather than
+			// being re-derived from `roles` at the top of the page.
+			member: memberRefColumns(),
 			memberNumber: user.memberNumber,
 			directoryVisibility: user.directoryVisibility,
 			stripeId: user.stripeId,
@@ -238,13 +242,16 @@ export const getUser = query(z.string(), async (id) => {
 	// its presence. It is reduced to a boolean here rather than shipped: the
 	// blob carries a Stripe subscription id, and the identity header only ever
 	// asks "are they sustaining?".
-	const { subscription, image, ...rest } = found;
+	const { subscription, image, member, ...rest } = found;
 
 	return {
 		...rest,
 		avatarUrl: resolveImageUrl(image),
 		sustaining: subscription != null,
-		roles
+		roles,
+		// Deactivation is this record's status, so it rides the avatar in the
+		// identity strip the way every other status does.
+		ref: { ...toMemberRef(member), status: rest.deletedAt ? 'deactivated' : null }
 	};
 });
 

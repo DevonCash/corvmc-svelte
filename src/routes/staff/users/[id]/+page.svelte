@@ -8,7 +8,7 @@
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import TabBar from '$lib/components/shared/TabBar.svelte';
 	import Badge from '$lib/components/shared/Badge.svelte';
-	import Avatar from '$lib/components/shared/Avatar.svelte';
+	import { EntityIdentity } from '$lib/components/shared/entity';
 	import { TAB_LABELS, parseTab, type TabKey } from './tabs';
 	import UserScoreboard from './panels/UserScoreboard.svelte';
 	import OverviewPanel from './panels/OverviewPanel.svelte';
@@ -117,26 +117,13 @@
 <PageContent width="full">
 	<!-- Identity strip. Everything here is true regardless of which tab is open,
 	     which is exactly why it sits above the TabBar rather than inside a tab. -->
-	<div class="flex flex-wrap items-center gap-4">
-		<Avatar src={member.avatarUrl ?? undefined} name={member.name} class="size-16" />
-		<div class="min-w-0">
-			<div class="flex flex-wrap items-baseline gap-2">
-				<span class="text-lg font-medium">{member.name}</span>
-				{#if member.pronouns}
-					<span class="text-muted">{member.pronouns}</span>
-				{/if}
-				{#if member.memberNumber}
-					<span class="text-muted">#{member.memberNumber}</span>
-				{/if}
-			</div>
-			<div class="text-muted">
-				<a class="link" href="mailto:{member.email}">{member.email}</a>
-				{#if member.phone}
-					· <a class="link" href="tel:{member.phone}">{member.phone}</a>
-				{/if}
-			</div>
-		</div>
-	</div>
+	<EntityIdentity ref={member.ref} size="lg" status email={member.email} phone={member.phone}>
+		{#snippet qualifiers()}
+			{#if member.memberNumber}
+				<span class="text-muted">#{member.memberNumber}</span>
+			{/if}
+		{/snippet}
+	</EntityIdentity>
 
 	<UserScoreboard {overview} />
 

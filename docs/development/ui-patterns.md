@@ -520,20 +520,6 @@ flag entity type mapped, and no success-toned status escaping `ordinaryStatuses`
 - **Card actions ride the bottom edge** (`mt-5 h-0`, outside `CardBody`), matching
   `member/reservations/ReservationCard.svelte`. Pass `size="xs"`.
 
-## MemberLink
-
-**Superseded by `EntityIdentity` / `EntityChip`** — being removed as its call sites migrate. It hardcodes
-its target as `/staff/users/${userId}`, which is why every non-staff surface hand-rolled its own
-member link, and it takes a summary object that 16 of its 17 call sites build inline.
-
-Displays a member's name (linked to their staff profile) and email. Optional avatar with initials.
-
-```svelte
-<MemberLink name={r.memberName} email={r.memberEmail} userId={r.createdByUserId} avatar />
-```
-
-Without `userId`, the name renders as plain text. Without `avatar`, only name + email are shown.
-
 ## BookerTypeIcon
 
 Maps a `bookerType` string to the appropriate icon (user or event).
@@ -832,7 +818,7 @@ Every list row is built from the same four slots, in this order:
    `dropdown dropdown-end`. Never hidden.
 
 **Merge before you hide.** If a column repeats or merely qualifies the primary
-cell, delete it and make it the subline — don't tier it. `MemberLink` already
+cell, delete it and make it the subline — don't tier it. `EntityIdentity` already
 renders the email and the admin/staff/sustaining glyph, so a list showing a
 member never needs separate Email or role columns.
 
