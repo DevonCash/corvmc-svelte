@@ -37,8 +37,13 @@
 	<!-- No static display class here: the conditional supplies it. With `flex`
 	     baked in as well, `hidden` and `flex` would both be on the element and the
 	     winner would come down to Tailwind's emit order rather than intent. -->
+	<!-- `@container` so the pane is what container queries resolve against. Shared
+	     components size themselves off it — FilterBar collapses its controls behind
+	     a disclosure below `@lg` (32rem), which is right here: search plus three
+	     selects has never fit a 20–24rem list pane. Without a container ancestor
+	     those queries silently never match, which is the same result by accident. -->
 	<div
-		class="w-full min-h-0 flex-col lg:w-80 lg:shrink-0 xl:w-96 {threadOpen
+		class="@container w-full min-h-0 flex-col lg:w-80 lg:shrink-0 xl:w-96 {threadOpen
 			? 'hidden lg:flex'
 			: 'flex'}"
 	>

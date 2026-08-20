@@ -34,6 +34,19 @@ async function navBadgeCount(page: Page): Promise<number> {
 	return Number((await badge.first().innerText()).trim());
 }
 
+/**
+ * Reveal the filter controls.
+ *
+ * The queue is a ~24rem list pane now, and `FilterBar` collapses everything but
+ * search behind a disclosure below its `@lg` container width — search plus three
+ * selects does not fit beside an open conversation.
+ */
+async function openFilters(page: Page) {
+	// A <label> driving a peer checkbox, not a button — FilterBar uses that
+	// because <details> cannot be forced open by CSS at wide widths.
+	await page.locator('label').filter({ hasText: 'Filters' }).first().click();
+}
+
 function row(page: Page, contact: string) {
 	// The queue is a list of conversation cards, not a table — see InboxShell.
 	return page.getByRole('listitem').filter({ hasText: contact });
@@ -52,6 +65,7 @@ test.describe('inbox awaiting reply', () => {
 	test('the waiting-on filter splits the two, and survives a round trip', async ({ page }) => {
 		await loginAsStaff(page);
 		await page.goto('/staff/inbox');
+		await openFilters(page);
 
 		await page.getByLabel('Waiting on').selectOption('yes');
 		await expect(row(page, SEED_AWAITING_CONTACT)).toBeVisible();
