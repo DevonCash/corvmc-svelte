@@ -8,6 +8,7 @@
 	import Form from '$lib/components/shared/Form/Form.svelte';
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
 	import ImportGigsModal from './ImportGigsModal.svelte';
+	import CreateEventModal from './CreateEventModal.svelte';
 	import { formatDate } from '$lib/utils/format';
 	import { formatEventTimeRange } from '$lib/utils/event-time';
 	import {
@@ -41,7 +42,7 @@
 <PageHeader title="Events" subtitle={band.name}>
 	{#if isAdmin}
 		<Button variant="ghost" size="sm" onclick={() => (importing = true)}>Import past gigs</Button>
-		<Button href="events/create" variant="default" size="sm">Create Event</Button>
+		<CreateEventModal bandId={band.id} bandSlug={band.slug} bandName={band.name} />
 	{/if}
 </PageHeader>
 <PageContent width="2xl">
@@ -74,7 +75,6 @@
 									onsuccess={() => invalidateAll()}
 									class="inline"
 								>
-									<input {...confirm.fields.slug.as('hidden', band.slug)} />
 									<input {...confirm.fields.eventId.as('hidden', invite.eventId)} />
 									<SubmitButton label="Confirm" variant="primary" size="sm" />
 								</Form>
@@ -84,7 +84,6 @@
 									onsuccess={() => invalidateAll()}
 									class="inline"
 								>
-									<input {...decline.fields.slug.as('hidden', band.slug)} />
 									<input {...decline.fields.eventId.as('hidden', invite.eventId)} />
 									<SubmitButton label="Decline" variant="ghost" size="sm" />
 								</Form>
@@ -100,12 +99,9 @@
 		<EmptyState>
 			<p>No events yet</p>
 			{#if isAdmin}
-				<a
-					href={resolve(`/band/${band.slug}/events/create`)}
-					class="mt-2 inline-block link link-primary"
-				>
-					Create your first event
-				</a>
+				<div class="mt-2">
+					<CreateEventModal bandId={band.id} bandSlug={band.slug} bandName={band.name} />
+				</div>
 			{/if}
 		</EmptyState>
 	{:else}
@@ -141,4 +137,4 @@
 	{/if}
 </PageContent>
 
-<ImportGigsModal bind:open={importing} bandSlug={band.slug} />
+<ImportGigsModal bind:open={importing} />

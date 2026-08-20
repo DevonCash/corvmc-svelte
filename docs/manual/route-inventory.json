@@ -32,10 +32,6 @@
 		"panel": "band"
 	},
 	{
-		"route": "/band/[slug]/events/create",
-		"panel": "band"
-	},
-	{
 		"route": "/band/[slug]/members",
 		"panel": "band"
 	},

@@ -47,7 +47,14 @@ const reservationServiceMock = {
 		startsAt: new Date(),
 		endsAt: new Date()
 	})),
-	cancel: vi.fn(async () => undefined)
+	cancel: vi.fn(
+		async (
+			_id: string,
+			_userId: string,
+			_reason?: string,
+			_options?: { staffOverride?: boolean; authorizedActor?: boolean }
+		) => undefined
+	)
 };
 
 vi.mock('$lib/server/reservation/reservation-service', () => reservationServiceMock);

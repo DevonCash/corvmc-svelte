@@ -35,6 +35,7 @@
 		input,
 		description,
 		readonly,
+		display,
 		issues: propIssues,
 		children,
 		upload,
@@ -55,6 +56,15 @@
 		class?: string;
 		value?: any;
 		readonly?: boolean;
+		/**
+		 * What to show in place of the input when `readonly`. Without it the
+		 * readonly branch prints `value` raw, which is the wrong thing for
+		 * anything the form stores differently from how a person reads it — a
+		 * date is `2026-08-20`, a time is `19:30`, a price is `10.00`. Pass a
+		 * string for a formatted scalar, or a snippet when the value is a link,
+		 * a list, or anything else with structure.
+		 */
+		display?: string | Snippet;
 		issues?: RemoteFormIssue[] | null;
 		upload?: (file: File) => Promise<string>;
 		accept?: string;
@@ -153,15 +163,34 @@
 	{:else if description}
 		<p class="text-muted text-sm">{@render description()}</p>
 	{/if}
-	{#if children}
+	<!--
+		`readonly` comes first on purpose. It used to sit after `children` and
+		`input`, which meant it was silently ignored on every field using
+		custom-input mode — exactly the fields that need it most (a long
+		description, a chip editor, a file input). A read-only field also renders
+		no `[name]` input at all, so it cannot post.
+	-->
+	{#if readonly}
+		{#if typeof display !== 'string' && display}
+			<div class="input h-auto min-h-12 w-full items-start py-3">
+				<div class="grow whitespace-pre-wrap">{@render display()}</div>
+				<IconPencilOff class="size-5 shrink-0 opacity-20" />
+			</div>
+		{:else if type === 'textarea'}
+			<div class="input h-auto min-h-12 w-full items-start py-3">
+				<span class="grow whitespace-pre-wrap">{display ?? value}</span>
+				<IconPencilOff class="size-5 shrink-0 opacity-20" />
+			</div>
+		{:else}
+			<p class="input w-full">
+				<span class="grow">{display ?? value}</span>
+				<IconPencilOff class="size-5 opacity-20" />
+			</p>
+		{/if}
+	{:else if children}
 		{@render children()}
 	{:else if input}
 		{@render input(resolvedId)}
-	{:else if readonly}
-		<p class="input w-full">
-			<span class="grow">{value}</span>
-			<IconPencilOff class="size-5 opacity-20" />
-		</p>
 	{:else if type === 'textarea'}
 		<textarea class="textarea w-full" class:ghost={readonly} {...inputProps} bind:value></textarea>
 	{:else if type === 'tags'}
