@@ -10,16 +10,18 @@
 		panel = 'staff',
 		isStaff = true,
 		userId = 'user-1',
-		status = true
+		status = true,
+		preview = true
 	}: {
 		ref: EntityRef;
 		panel?: Panel;
 		isStaff?: boolean;
 		userId?: string | null;
 		status?: boolean;
+		preview?: boolean;
 	} = $props();
 </script>
 
 <EntityViewer {panel} {userId} {isStaff}>
-	<EntityChip {ref} {status} />
+	<EntityChip {ref} {status} {preview} />
 </EntityViewer>

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { render } from 'vitest-browser-svelte';
+import { page } from 'vitest/browser';
 import Harness from './EntityChipHarness.svelte';
 import { fakeRef } from '$lib/test/fixtures';
 
@@ -47,6 +48,39 @@ describe('EntityChip', () => {
 				status: false
 			});
 			expect(document.querySelector('[role="img"]')).toBeNull();
+		});
+	});
+
+	/**
+	 * The preview shows the record's `md` identity, not a bespoke summary: the
+	 * point is to show what the reader would find by following the link, and a
+	 * second layout for that is a second thing to keep true.
+	 */
+	describe('preview', () => {
+		it('opens on hover and shows the record identity', async () => {
+			render(Harness, {
+				ref: fakeRef('band', { id: 'band-1', slug: 'vu', subtitle: '4 members' })
+			});
+			await page.getByRole('link', { name: /Velvet Underground/ }).hover();
+			await expect.element(page.getByText('4 members')).toBeVisible();
+		});
+
+		it('opens on keyboard focus, so it is not mouse-only', async () => {
+			render(Harness, {
+				ref: fakeRef('band', { id: 'band-1', slug: 'vu', subtitle: '4 members' })
+			});
+			const link = page.getByRole('link', { name: /Velvet Underground/ });
+			await link.element().focus();
+			await expect.element(page.getByText('4 members')).toBeVisible();
+		});
+
+		it('can be turned off', async () => {
+			render(Harness, {
+				ref: fakeRef('band', { id: 'band-1', slug: 'vu', subtitle: '4 members' }),
+				preview: false
+			});
+			await page.getByRole('link', { name: /Velvet Underground/ }).hover();
+			expect(document.querySelector('[data-link-preview-content]')).toBeNull();
 		});
 	});
 });

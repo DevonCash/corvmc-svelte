@@ -1,5 +1,8 @@
 <script lang="ts">
 	import clsx from 'clsx';
+	import { LinkPreview } from 'bits-ui';
+	import { browser } from '$app/environment';
+	import EntityIdentity from './EntityIdentity.svelte';
 	import type { EntityRef } from '$lib/types/entity';
 	import StatusMark from './StatusMark.svelte';
 	import { entityIcon, isNoteworthyStatus, toneFor } from './registry';
@@ -27,7 +30,7 @@
 		icon = true,
 		status = true,
 		class: className = '',
-		preview: _preview = false
+		preview = true
 	}: {
 		ref: EntityRef;
 		/** The type glyph. Off when surrounding context already names the type. */
@@ -64,6 +67,21 @@
 	// line, so the hover cue is to ease off. Only when it links — hover means
 	// nothing on a chip that cannot be opened.
 	const tone = $derived(notable ? toneFor(ref.status) : null);
+	/**
+	 * A pointer that cannot hover has no way to reach a hover preview, so on
+	 * touch the first tap opens it instead of following the link — the name
+	 * inside the preview is then the way through. Checked per-device rather than
+	 * by width: a laptop with a touchscreen still hovers.
+	 */
+	const coarse = $derived(browser && !window.matchMedia('(hover: hover)').matches);
+	let open = $state(false);
+
+	function onclick(event: MouseEvent) {
+		if (!preview || !coarse) return;
+		event.preventDefault();
+		open = true;
+	}
+
 	const toneClass = $derived(
 		tone ? `${tone.border} ${href ? `transition-colors ${tone.borderHover}` : ''}` : ''
 	);
@@ -102,17 +120,51 @@
 	);
 </script>
 
-{#if href}
-	<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- href comes from entityHref(), which calls resolve() internally; the rule cannot trace it through the function -->
-	<a {href} class={classes}>
-		{#if icon}<glyph.icon size={16} class="shrink-0" />{/if}
-		<span class="min-w-0 truncate">{ref.title}</span>
-		{#if notable && ref.status}<StatusMark status={ref.status} />{/if}
-	</a>
+{#snippet chip(triggerProps: Record<string, unknown> = {})}
+	{#if href}
+		<!--
+			`role` is dropped from the trigger props: bits-ui sets `role="button"`,
+			which is right for a trigger that only opens something but wrong for one
+			that also navigates — it would announce a link as a button. The
+			`aria-haspopup` it also sets is kept, since the preview really is there.
+		-->
+		{@const { role: _role, ...linkProps } = triggerProps}
+		<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- href comes from entityHref(), which calls resolve() internally; the rule cannot trace it through the function -->
+		<a {...linkProps} {href} {onclick} class={classes}>
+			{#if icon}<glyph.icon size={16} class="shrink-0" />{/if}
+			<span class="min-w-0 truncate">{ref.title}</span>
+			{#if notable && ref.status}<StatusMark status={ref.status} />{/if}
+		</a>
+	{:else}
+		<span {...triggerProps} class={classes}>
+			{#if icon}<glyph.icon size={16} class="shrink-0 opacity-60" />{/if}
+			<span class="min-w-0 truncate">{ref.title}</span>
+			{#if notable && ref.status}<StatusMark status={ref.status} />{/if}
+		</span>
+	{/if}
+{/snippet}
+
+{#if preview}
+	<LinkPreview.Root bind:open openDelay={400} closeDelay={200}>
+		<LinkPreview.Trigger>
+			{#snippet child({ props })}
+				{@render chip(props)}
+			{/snippet}
+		</LinkPreview.Trigger>
+		<LinkPreview.Portal>
+			<LinkPreview.Content
+				sideOffset={6}
+				class="z-50 max-w-xs rounded-lg border border-base-300 bg-base-100 p-3 shadow-lg"
+			>
+				<!--
+					The `md` identity, not a bespoke summary: the point of a preview is to
+					show the same thing the reader would find by following the link, and a
+					second layout for it is a second thing to keep true.
+				-->
+				<EntityIdentity {ref} size="md" status />
+			</LinkPreview.Content>
+		</LinkPreview.Portal>
+	</LinkPreview.Root>
 {:else}
-	<span class={classes}>
-		{#if icon}<glyph.icon size={16} class="shrink-0 opacity-60" />{/if}
-		<span class="min-w-0 truncate">{ref.title}</span>
-		{#if notable && ref.status}<StatusMark status={ref.status} />{/if}
-	</span>
+	{@render chip()}
 {/if}
