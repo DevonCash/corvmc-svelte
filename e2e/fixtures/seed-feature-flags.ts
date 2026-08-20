@@ -16,7 +16,7 @@ import { withPlatformEnv } from './platform-db';
  * recipient picker — without it `requireFeature` rejects before any of the
  * messaging lifecycle can be exercised.
  */
-export const ENABLED_FLAGS = ['bandPremium', 'directMessages'] as const;
+export const ENABLED_FLAGS = ['bandPremium', 'bandReservations', 'directMessages'] as const;
 
 export async function seedFeatureFlags(): Promise<void> {
 	await withPlatformEnv(async ({ env }) => {

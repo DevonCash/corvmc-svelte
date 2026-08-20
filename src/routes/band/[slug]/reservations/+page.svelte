@@ -5,15 +5,18 @@
 	import PageContent from '$lib/components/shared/PageContent.svelte';
 	import EmptyState from '$lib/components/shared/EmptyState.svelte';
 	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
-	import Button from '$lib/components/shared/Button.svelte';
 	import TabBar from '$lib/components/shared/TabBar.svelte';
 	import Form from '$lib/components/shared/Form';
 	import SubmitButton from '$lib/components/shared/Form/SubmitButton.svelte';
-	import { invalidateAll } from '$app/navigation';
-	import { resolve } from '$app/paths';
 	import { toast } from 'svelte-sonner';
 	import { formatDate, formatTime, formatDuration } from '$lib/utils/format';
-	import { cancelBandReservation, getBandReservations } from '$lib/remote/reservations.remote';
+	import {
+		cancelBandReservation,
+		getBandReservations,
+		getBandMembershipStatus,
+		getBookingContact
+	} from '$lib/remote/reservations.remote';
+	import CreateModal from './CreateModal.svelte';
 	import { getBandLayout } from '$lib/remote/layout.remote';
 	import { page } from '$app/state';
 
@@ -21,14 +24,25 @@
 
 	let layout = $derived(await getBandLayout(page.params.slug!));
 	let data = $derived(await getBandReservations(page.params.slug!));
+	// Resolved here and handed down, so the step components stay synchronous.
+	let membership = $derived(await getBandMembershipStatus());
+	let contact = $derived(await getBookingContact());
 	const upcoming = $derived(data.upcoming);
 	const past = $derived(data.past);
 	const band = $derived(layout.band);
 	let activeTab = $state<'upcoming' | 'past'>('upcoming');
+
+	function refresh() {
+		void getBandReservations(page.params.slug!).refresh();
+	}
 </script>
 
 <PageHeader title="Reservations" subtitle={band.name}>
-	<Button href="reservations/new" variant="default" size="sm">Book a Session</Button>
+	<CreateModal
+		hasSustainingMember={membership.hasSustainingMember}
+		needsPhone={contact.needsPhone}
+		onbooked={refresh}
+	/>
 </PageHeader>
 <PageContent width="2xl">
 	<TabBar
@@ -42,15 +56,10 @@
 
 	{#if activeTab === 'upcoming'}
 		{#if upcoming.length === 0}
-			<EmptyState>
-				<p>No upcoming reservations</p>
-				<a
-					href={resolve(`/band/${band.slug}/reservations/new`)}
-					class="mt-2 inline-block link link-primary"
-				>
-					Book your first session
-				</a>
-			</EmptyState>
+			<EmptyState
+				title="No upcoming sessions"
+				description="Book the practice space and it'll show up here for the whole band."
+			/>
 		{:else}
 			<div class="space-y-3">
 				{#each upcoming as res (res.id)}
@@ -86,7 +95,7 @@
 										remote={cancel}
 										onsuccess={() => {
 											toast.success('Reservation cancelled');
-											invalidateAll();
+											refresh();
 										}}
 										onfailure={() => toast.error('Failed to cancel')}
 									>

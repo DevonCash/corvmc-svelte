@@ -675,30 +675,6 @@ export const previewRecurringInstances = query(
 	}
 );
 
-/** Band: available slots + config + recurring frequencies for a given date. */
-export const getBandSlots = query(z.string(), async (dateParam) => {
-	await requireFeature('bandReservations');
-	await requireBandMember();
-
-	const dateStr = dateParam || formatDateInTz(new Date(), DEFAULT_TIMEZONE);
-	const [slots, reservationConfig] = await Promise.all([
-		getAvailableSlots(dateStr),
-		getReservationConfig()
-	]);
-
-	return {
-		date: dateStr,
-		slots,
-		recurringFrequencies: RECURRING_FREQUENCIES,
-		config: {
-			hourlyRateCents: reservationConfig.hourlyRateCents,
-			slotMinutes: reservationConfig.timeSlotMinutes,
-			minDurationHours: reservationConfig.minDurationHours,
-			maxDurationHours: reservationConfig.maxDurationHours
-		}
-	};
-});
-
 /** Staff: check conflicts for a given date/time range. */
 export const checkConflicts = query(
 	z.object({ date: z.string(), startTime: z.string(), endTime: z.string() }),

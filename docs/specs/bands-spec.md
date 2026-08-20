@@ -139,14 +139,13 @@ Staff with the `admin` or `staff` role can manage any band (edit, delete, remove
 
 All routes under `/band/{slug}/` require the user to be an active member of that band. A layout load function resolves the band by slug and verifies membership.
 
-| Route                           | Page                                                       | Access                              |
-| ------------------------------- | ---------------------------------------------------------- | ----------------------------------- |
-| `/band/{slug}/`                 | Dashboard — band name, member count, upcoming reservations | all members                         |
-| `/band/{slug}/members`          | Members list, invite form, pending invitations             | all members (actions gated by role) |
-| `/band/{slug}/reservations`     | Band's reservations list                                   | all members                         |
-| `/band/{slug}/reservations/new` | New reservation flow (band as booker)                      | all members                         |
-| `/band/{slug}/edit`             | Edit band profile (name, bio, avatar)                      | owner, admin                        |
-| `/band/{slug}/settings`         | Delete band, transfer ownership                            | owner                               |
+| Route                       | Page                                                       | Access                              |
+| --------------------------- | ---------------------------------------------------------- | ----------------------------------- |
+| `/band/{slug}/`             | Dashboard — band name, member count, upcoming reservations | all members                         |
+| `/band/{slug}/members`      | Your own membership, then the roster and invitations       | all members (actions gated by role) |
+| `/band/{slug}/reservations` | Band's reservations list, with the booking modal           | all members                         |
+| `/band/{slug}/edit`         | Edit band profile (name, bio, avatar)                      | owner, admin                        |
+| `/band/{slug}/settings`     | Band address; delete band                                  | owner, admin (read-only)            |
 
 ### Member panel additions
 

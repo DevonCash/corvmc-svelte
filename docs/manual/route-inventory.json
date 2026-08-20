@@ -48,10 +48,6 @@
 		"panel": "band"
 	},
 	{
-		"route": "/band/[slug]/reservations/new",
-		"panel": "band"
-	},
-	{
 		"route": "/band/[slug]/settings",
 		"panel": "band"
 	},

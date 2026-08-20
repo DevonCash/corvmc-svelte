@@ -21,13 +21,20 @@
 	let {
 		reservation,
 		fields = {},
-		staff = false
+		staff = false,
+		band = false
 	}: {
 		reservation?: { id: string; startsAt: Date; endsAt: Date };
 		fields?: { id?: RemoteFormField<string> };
 		// Staff confirming on the owner's behalf: render a single Confirm action
 		// (no Pay Ahead / online checkout) and key pricing to the reservation owner.
 		staff?: boolean;
+		/**
+		 * A band booking its practice space. One Book action and no Pay Ahead —
+		 * `bookBandReservation` takes no payment, so a payment step would charge
+		 * nobody and show a receipt for it.
+		 */
+		band?: boolean;
 	} = $props();
 
 	const formCtx = getFormContext()!;
@@ -211,7 +218,23 @@
 			</div>
 		{/if}
 
-		{#if staff}
+		{#if band}
+			<!-- Worth saying out loud: two bandmates opening this dialog for the
+			     same slot can see different prices, because credits are keyed to
+			     `createdByUserId` and a band has no balance of its own. Unexplained
+			     that reads as a bug. -->
+			<p class="text-subtle">
+				Bands don't have their own free hours.
+				{#if pricing && pricing.creditsApplicable > 0}
+					{@const freeHours = creditsToHours(pricing.creditsApplicable)}
+					Your personal free hours apply to this booking — {freeHours}
+					{freeHours === 1 ? 'hr' : 'hrs'} of yours will cover it, and the rest is due at the door.
+				{:else}
+					This is booked in your name, so your personal free hours would apply — you have none left
+					this month, so the full amount is due at the door.
+				{/if}
+			</p>
+		{:else if staff}
 			<p class="text-subtle">
 				Comp makes this reservation fully free without using the member's free hours.
 				{#if pricing && pricing.creditsApplicable > 0}
@@ -226,7 +249,9 @@
 			{#if formCtx.currentStep > 0}
 				<Button type="button" variant="ghost" onclick={() => formCtx.back()}>Back</Button>
 			{/if}
-			{#if staff}
+			{#if band}
+				<Button type="submit" variant="primary">Book Session</Button>
+			{:else if staff}
 				<!-- Staff choice: comp (fully free, no credits used) or apply the member's
 				     credits (submitter name/value sets comp only when that button submits). -->
 				<Button type="submit" name="comp" value="on" variant="info" outline>Comp</Button>

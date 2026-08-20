@@ -176,7 +176,6 @@ vi.mock('$app/server', () => ({
 }));
 
 const {
-	getBandSlots: getSlots,
 	bookBandReservation: bookReservation,
 	cancelBandReservation,
 	getBandMembershipStatus,
@@ -203,23 +202,6 @@ function bandReservationRow(createdByUserId = 'user-owner', bookerId = 'band-1')
 // ---------------------------------------------------------------------------
 // Remote handlers
 // ---------------------------------------------------------------------------
-
-describe('getSlots', () => {
-	it('returns available slots and config', async () => {
-		const result = await getSlots('2026-06-15');
-
-		expect(conflictServiceMock.getAvailableSlots).toHaveBeenCalled();
-		expect(result.slots).toHaveLength(3);
-		expect(result.config.hourlyRateCents).toBe(1500);
-		expect(result.config.slotMinutes).toBe(30);
-	});
-
-	it('requires band membership', async () => {
-		bandServiceMock.getUserRole.mockResolvedValue(null);
-
-		await expect(getSlots('2026-06-15')).rejects.toThrow();
-	});
-});
 
 describe('bookReservation', () => {
 	it('creates reservation with band as booker', async () => {
