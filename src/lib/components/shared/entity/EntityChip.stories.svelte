@@ -3,6 +3,8 @@
 	import EntityChip from './EntityChip.svelte';
 	import EntityGallery from './EntityGallery.svelte';
 	import { fakeRef } from '$lib/test/fixtures';
+	import DefinitionList from '../DefinitionList/DefinitionList.svelte';
+	import Fact from '../DefinitionList/Fact.svelte';
 
 	const { Story } = defineMeta({
 		title: 'Shared/Entity/EntityChip',
@@ -71,3 +73,26 @@
 	</div>
 {/snippet}
 <Story name="Staff-only records" template={staffOnlyStory} />
+
+<!--
+	Where a chip actually lives: inside a fact list and inside a sentence. Worth
+	its own story because a contained chip has to sit in a line of text without
+	pushing the leading around — the failure mode a bare link never had.
+-->
+{#snippet inContext()}
+	<div class="flex max-w-lg flex-col gap-6">
+		<DefinitionList>
+			<Fact label="Type">Band profile</Fact>
+			<Fact label="Content"><EntityChip ref={fakeRef('band', { id: 'band-1' })} /></Fact>
+			<Fact label="Reason">Misleading info</Fact>
+			<Fact label="Reported by"><EntityChip ref={fakeRef('member', { id: 'm1' })} /></Fact>
+		</DefinitionList>
+
+		<p>
+			Reported by <EntityChip ref={fakeRef('member', { id: 'm1' })} /> against
+			<EntityChip ref={fakeRef('band', { id: 'band-1' })} /> in connection with
+			<EntityChip ref={fakeRef('event', { id: 'e1' })} />, which is still on the public guide.
+		</p>
+	</div>
+{/snippet}
+<Story name="In a fact list and in prose" template={inContext} />
