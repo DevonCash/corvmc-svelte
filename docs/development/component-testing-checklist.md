@@ -34,7 +34,7 @@ Incremental coverage for isolated component tests. See
 - [x] EntityIdentity (stories + `EntityIdentity.svelte.spec.ts` — pins the no-wrapper `sm` shape,
       that a bare cell draws no status, and that status rides the media once given an avatar)
 - [x] EntityCard (stories)
-- [ ] RelatedList (adopted by all six user panels in Stage D; no story yet)
+- [x] RelatedList (stories cover the three states its `{:catch}` exists for)
 - [ ] FormField (has a spec; add a story for the gallery)
 
 See `docs/development/component-style-audit.md` for the visual audit run over these.
