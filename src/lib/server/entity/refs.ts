@@ -28,6 +28,7 @@ import { primaryRoleFor } from '$lib/server/authorization';
 import { isSustainingMemberSql } from '$lib/server/finance/subscription-service';
 import { resolveImageUrl } from '$lib/server/storage';
 import { memberSubtype } from '$lib/utils/entity-ref';
+import { flagEntityTypeToEntity } from '$lib/config';
 import { formatDate, formatDuration, formatTimeRange } from '$lib/utils/format';
 import type { BandRef, EntityRef, EventRef, MemberRef, ReservationRef } from '$lib/types/entity';
 
@@ -251,4 +252,40 @@ export function toReservationRef(
 		bandId: band?.id ?? null,
 		bandSlug: band?.slug ?? null
 	};
+}
+
+// ---------------------------------------------------------------------------
+// Flag target
+// ---------------------------------------------------------------------------
+
+/**
+ * What a report is *about*, as a record.
+ *
+ * `contentFlag.entityType` has its own vocabulary — older, narrower, and named
+ * after the profile rather than the record behind it — so `flagEntityTypeToEntity`
+ * bridges the two and `registry.spec.ts` asserts it covers every value. Before
+ * this, `staff/flags/[id]` carried a hand-written label map and a five-deep
+ * ternary that rebuilt each route by hand, one arm of which pointed at the
+ * public listing while the staff record sat one click away.
+ *
+ * The label is passed in rather than looked up again: `getFlag` has already
+ * resolved it, and for a direct conversation that label is deliberately a
+ * content-free constant rather than the subject line.
+ *
+ * **A flagged conversation gets `id: null` on purpose.** A direct thread has no
+ * staff page — the report is the only way to see it, which is the whole design
+ * of `getThread` — so the ref must not resolve to `/staff/inbox/[id]`. Unlinked
+ * is the honest rendering, and the page shows the thread inline anyway.
+ */
+export function toFlagTargetRef(
+	entityType: string,
+	entityId: string,
+	label: string | null
+): EntityRef {
+	const type = flagEntityTypeToEntity[entityType] ?? 'member';
+	return {
+		type,
+		id: type === 'thread' ? null : entityId,
+		title: label ?? '(deleted)'
+	} as EntityRef;
 }
