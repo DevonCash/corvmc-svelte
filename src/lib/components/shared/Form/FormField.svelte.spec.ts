@@ -164,6 +164,61 @@ describe('FormField', () => {
 	});
 
 	// -----------------------------------------------------------------------
+	// file
+	//
+	// SvelteKit *throws* — not warns — when a form holds an `<input type="file">`
+	// without `enctype="multipart/form-data"`, and the throw happens before the
+	// request is built. The visible symptom is a Save that does nothing at all,
+	// which is why band and staff event posters never uploaded. `Form` sets the
+	// attribute when it can see a file input; these pin the field half of it.
+	// -----------------------------------------------------------------------
+
+	describe('file (deferred upload)', () => {
+		it('renders a real file input carrying the field name, so the File submits', async () => {
+			const field = create_field_proxy(
+				{},
+				() => ({}),
+				() => {},
+				() => ({}),
+				['posterFile']
+			);
+			const { container } = render(FormField, { field, type: 'file', label: 'Poster' });
+
+			const input = container.querySelector('input[type="file"]') as HTMLInputElement;
+			expect(input).not.toBeNull();
+			expect(input.name).toBe('posterFile');
+		});
+
+		// A same-named hidden input alongside the file input would be submitted
+		// too and clobber the File with an empty string.
+		it('renders no second input under the same name', async () => {
+			const field = create_field_proxy(
+				{},
+				() => ({}),
+				() => {},
+				() => ({}),
+				['posterFile']
+			);
+			const { container } = render(FormField, { field, type: 'file', label: 'Poster' });
+
+			expect(container.querySelectorAll('[name="posterFile"]')).toHaveLength(1);
+		});
+
+		it('offers a labelled control rather than a bare file picker', async () => {
+			const field = create_field_proxy(
+				{},
+				() => ({}),
+				() => {},
+				() => ({}),
+				['posterFile']
+			);
+			render(FormField, { field, type: 'file', label: 'Poster', emptyLabel: 'Add a poster' });
+
+			await expect.element(page.getByText('Add a poster')).toBeInTheDocument();
+		});
+	});
+
+	// -----------------------------------------------------------------------
 	// readonly
 	//
 	// The readonly branch used to sit *after* `children` and `input`, so a field

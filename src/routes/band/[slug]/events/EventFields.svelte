@@ -169,25 +169,38 @@
 	<LineupEditor bind:value={lineup} ownerBandId={bandId} {readonly} />
 </FormField>
 
-<!-- Straight through the form, unlike the staff modal's create-then-POST: a
-     failed upload there can leave a posterless event behind. -->
-{#if !readonly || poster}
-	<FormField name="posterFile" label="Poster">
-		{#if poster}
+<!--
+	Same treatment as the band avatar — a preview you can see and a Replace
+	button — rather than the bare `file-input` this used to be, which read as a
+	setting you could skip and is why posters went unadded.
+
+	Still submits with the form, unlike the avatar's immediate POST: an event's
+	poster is picked before the event exists, so uploading it up front is how you
+	end up with orphaned posters when the create fails. `FileUpload`'s deferred
+	mode gives the same chrome without the eager write.
+-->
+{#if !readonly}
+	<FormField
+		field={fields.posterFile}
+		type="file"
+		label="Poster"
+		accept="image/jpeg,image/png,image/webp"
+		src={poster?.src}
+		previewClass="h-40 w-32"
+		emptyLabel="Add a poster"
+		replaceLabel="Replace poster"
+		description="Shown on your events list, your band page, and the community calendar."
+	/>
+{:else if poster}
+	<FormField label="Poster" readonly>
+		{#snippet display()}
 			<img
 				src={poster.src}
 				srcset={poster.srcset}
 				alt="Event poster"
-				class="mb-2 h-32 w-32 rounded object-cover"
+				class="h-40 w-32 rounded object-cover"
 			/>
-		{/if}
-		{#if !readonly}
-			<input
-				{...fields.posterFile.as('file')}
-				accept="image/jpeg,image/png,image/webp"
-				class="file-input w-full"
-			/>
-		{/if}
+		{/snippet}
 	</FormField>
 {/if}
 

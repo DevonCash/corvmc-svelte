@@ -73,6 +73,23 @@
 	const errorBoundary = getErrorBoundary();
 
 	let formEl: HTMLFormElement | undefined = $state();
+
+	/**
+	 * A form carrying a real `<input type="file">` has to be multipart, and
+	 * SvelteKit *throws* rather than warns when it isn't — which aborts the
+	 * submit before any request leaves the browser. The symptom is a Save button
+	 * that silently does nothing, which is how band and staff event posters have
+	 * never actually uploaded.
+	 *
+	 * Set here rather than asked of every caller: forms that need it are exactly
+	 * the forms that contain one, and that is something this component can see.
+	 * Harmless where there is no file input, since it only applies then.
+	 */
+	$effect(() => {
+		if (formEl?.querySelector('input[type="file"]')) {
+			formEl.enctype = 'multipart/form-data';
+		}
+	});
 	let changeCount = $state(0);
 	let actionIssues = $state<RemoteFormIssue[] | null>(null);
 	let currentStep = $state(0);

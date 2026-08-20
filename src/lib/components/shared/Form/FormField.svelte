@@ -102,14 +102,21 @@
 	// Resolve field attributes from SvelteKit field definition when provided
 	let fieldAttrs = $derived.by(() => {
 		if (!field) return null;
+		// `file` maps to itself: a deferred upload submits a real File on a real
+		// file input, and `.as('text')` would register the field as a string and
+		// hand the handler the filename instead. The other three are text under
+		// the hood — a textarea, a JSON blob, a date string.
 		const asType = isBooleanInput
 			? 'checkbox'
-			: type === 'textarea' || type === 'tags' || type === 'calendar' || type === 'file'
-				? 'text'
-				: (type ?? 'text');
+			: type === 'file'
+				? 'file'
+				: type === 'textarea' || type === 'tags' || type === 'calendar'
+					? 'text'
+					: (type ?? 'text');
 		// Forward the supplied value so plain inputs render pre-filled from existing
 		// data (edit forms). `.as(type, value)` controls the rendered value.
-		return ownsValue || value === undefined
+		// A file field has no renderable value to forward — the browser owns it.
+		return ownsValue || value === undefined || asType === 'file'
 			? field.as(asType as any)
 			: field.as(asType as any, value);
 	});
@@ -223,14 +230,22 @@
 			/>
 			{#if rest.checkboxLabel}<span>{rest.checkboxLabel}</span>{/if}
 		</label>
-	{:else if type === 'file' && upload}
+	{:else if type === 'file' && (upload || field)}
+		<!-- Two modes. With `upload`, the file posts immediately and the returned
+		     key is what submits (a band avatar). With a remote `field` and no
+		     `upload`, the File rides this form — which is the only option when the
+		     record it belongs to does not exist yet. -->
 		<FileUpload
 			name={resolvedName}
 			{upload}
+			inputProps={upload ? undefined : (fieldAttrs ?? undefined)}
 			{accept}
 			{value}
 			{src}
 			orientation={rest.orientation}
+			previewClass={rest.previewClass}
+			emptyLabel={rest.emptyLabel}
+			replaceLabel={rest.replaceLabel}
 			disabled={pending || readonly}
 		/>
 	{:else if type === 'select' && rest.multiple}
