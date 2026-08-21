@@ -4,6 +4,17 @@ import { E2E_PERSIST_PATH } from './e2e/state-dir';
 export default defineConfig({
 	// Seed the local D1 (member + payable reservation) before any test runs.
 	globalSetup: './e2e/global-setup.ts',
+	// CI runs the suite in parallel against one preview server holding one set of
+	// SQLite files, on a runner with a fraction of a laptop's cores. The heavy
+	// specs — a band booking a session is ~50s alone — then miss their own
+	// assertion windows: on 2026-08-21 four consecutive runs of #242 went red, a
+	// different test each time, every one of them passing locally in isolation.
+	// With `retries: 0` that reddens a required check, and a red required check
+	// disarms auto-merge, so the PR sits open with nothing watching it. A retried
+	// test is reported as "flaky" rather than passing quietly, so this buys the
+	// queue tolerance without hiding a test that has started to fail for real —
+	// watch the flaky count, and fix the spec when one stops being occasional.
+	retries: process.env.CI ? 2 : 0,
 	webServer: {
 		command: 'npm run build && npm run preview',
 		port: 4173,
