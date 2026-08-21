@@ -6,16 +6,10 @@ The driving case is the Real Book Club jazz jam: a CMC program with a roster, a 
 
 This spec splits today's `band` table by purpose. `group` is the managed organization; `directory_entry` is the public listing, shared with members; `band_site` is the premium microsite; `contact` holds the private details of people who are not members. The split is what lets clubs and committees reuse the roster machinery without inheriting band-shaped columns, what lets a touring act exist as a staff-kept record with no roster at all, and what keeps a promoter's phone number out of every table a public query touches.
 
-**Classes are deliberately out of scope.** A class needs enrollment, not membership — term boundaries, attendance, completion — and none of that is expressible as a roster. See [Deferred](#deferred).
-
-> This spec is the source of truth for the band/group boundary. Where
-> [production-workflow-spec.md](production-workflow-spec.md) describes external acts as `band` rows,
-> this spec supersedes it. It also settles that boundary against
-> [event-lineup-spec.md](event-lineup-spec.md), whose `event_band` table shipped after this spec was
-> first drafted and which mentions neither groups nor directory entries — see [Events](#events).
->
-> `production_slot` appears below as a design contrast, not as a table that exists: the production
-> workflow is itself unbuilt.
+> This spec is the source of truth for the band/group boundary, including where it meets
+> [production-workflow-spec.md](production-workflow-spec.md) and
+> [event-lineup-spec.md](event-lineup-spec.md). `production_slot` appears below as a design contrast
+> rather than an existing table.
 
 ---
 
@@ -34,13 +28,8 @@ details out of it.
 | `band_site`       | The premium microsite — tier, subscription, custom domain, EPK, blocks | a group                     |
 | `contact`         | Private third-party contact details — never public                     | a directory entry           |
 
-An earlier draft of this spec split `band` into `group` + `band_profile`, one profile per band. That
-was the right instinct applied to the wrong axis. Splitting by entity type meant `band_profile` had
-to stand alone to model a touring act, which forced its `name`/`description`/`avatarKey` to be
-populated **only** when `groupId IS NULL` — a column meaning two different things depending on a
-sibling column's nullness, enforceable only in the service layer because a CHECK constraint would
-trigger a D1 table rebuild. Splitting by purpose removes that entirely: identity always lives in one
-place, and what varies is what the entry is attached to.
+Splitting on purpose rather than entity type is what keeps identity in one place: a name lives on the
+directory entry and nowhere else, and what varies is only what that entry is attached to.
 
 Three kinds of group:
 
@@ -62,18 +51,16 @@ determine is the line below, which is a governance fact rather than a UI one:
 | Its events may hold the room free | No                                      | **Yes**                                  |
 | Rehearsal bookings                | `bookerType: 'band'`, credits then cash | n/a — see [Room time](#room-time)        |
 
-Note what `kind` no longer carries. "Band" is not a table any more — it is _a group with a directory
-entry, optionally with a band site_. So `kind` is left holding governance alone: who may create, who
-may delete, and who gets free room time. That is what an enum is good at.
+"Band" is not a table — it is _a group with a directory entry, optionally with a band site_. So
+`kind` carries governance alone: who may create, who may delete, and who gets free room time.
 
 **A club or committee is a sanctioned CMC program by construction.** There is no `sanctioned` flag,
 because the existence of the row is the sanction — staff created it and staff appointed whoever runs
 it. A band is the opposite: a member's own project, self-created, paying for its own rehearsal time.
 
-That distinction is what makes free room time safe to grant. An earlier draft proposed a
-`sanctioned` boolean so staff could bless individual groups; it is unnecessary once members cannot
-create clubs at all. The abuse case — spin up a fake club, give it a weekly "event," collect free
-room time — is closed structurally rather than by a check someone has to remember.
+That distinction is what makes free room time safe to grant. The abuse case — spin up a fake club,
+give it a weekly "event," collect free room time — is closed structurally rather than by a check
+someone has to remember.
 
 Adding a kind later is a one-line change to this union plus a row in that table.
 
@@ -101,7 +88,7 @@ group
 
 Two things qualify that "only" without weakening it, and both are covered in [Addresses](#addresses): released slugs, which `group_slug_history` keeps so old links still resolve, and premium custom domains, which are an alternate address for a microsite rather than an entry in this namespace.
 
-The index is `unique(slug)`, not `unique(kind, slug)`: one namespace shared by bands, clubs, and committees alike. A per-kind namespace would work, but it would make `requireGroupRole({ slug })` ambiguous — see [Decisions that were open](#decisions-that-were-open).
+The index is `unique(slug)`, not `unique(kind, slug)`: one namespace shared by bands, clubs, and committees alike. Per-kind would make `requireGroupRole({ slug })` ambiguous, since the guard resolves a group from a slug alone at ~90 call sites and would need the kind before it could resolve anything.
 
 **There is no `ownerId`.** The owner is the `group_member` row with `role = 'owner'`, enforced by a partial unique index. See [Ownership](#ownership).
 
@@ -111,9 +98,8 @@ The index is `unique(slug)`, not `unique(kind, slug)`: one namespace shared by b
 
 ### Directory entry
 
-Replaces `band_profile`, and absorbs the member profile with it.
-
-The duplication is already in the schema and is the argument for this table. `user` and `band` hold
+One listing shape for members and groups alike. The duplication that justifies it is already in the
+schema: `user` and `band` hold
 **seven identical columns** — `name`, `bio`, `tagline`, `hometown`, `links`, `directoryVisibility`,
 `directoryContact` — plus `lookingForBand` and `lookingForMembers`, which are the same idea pointed
 in opposite directions. There are three tag tables (`user_genre`, `user_instrument`, `band_genre`)
@@ -226,16 +212,9 @@ lineup, a run of show, an event page — it renders as:
 
 Never a link to a CMC page, because there is no CMC page to link to.
 
-An earlier draft gave unclaimed acts a `publicId` and a `/a/{publicId}` share page, on the theory
-that staff would want to forward an act's record to a promoter. That was solving a problem nobody
-has — a promoter wants the band's own links, not our copy of them — and it created a page holding
-third-party information that we would then have to reason about the exposure of. It is gone, along
-with the `publicId` column.
-
 ##### How this meets `event_band`
 
-`event_band` shipped after this spec was first drafted and appears, at a glance, to model the same
-thing. It does not, and both stay.
+`event_band` looks at a glance like a competing model of the same thing. It is not, and both stay.
 
 - **`event_band` is a credit on one bill** — a display name, a billing order, a consent status. It
   is per-event and says nothing about the act beyond how it appeared that night.
@@ -404,8 +383,7 @@ This is the same pattern narrowed to one row and one form.
 
 ### Addresses
 
-Band addresses shipped after this spec was first drafted, and the split has to say where each half of
-that machinery lands.
+The split has to say where each half of the band-address machinery lands.
 
 **`band_slug_history` becomes `group_slug_history`**, re-keyed to `groupId`. A released slug is a
 fact about an address, and addresses belong to the group, so the history follows the namespace it
@@ -620,7 +598,7 @@ _credit_ versus _reach_: `event_band` answers "whose name is on the poster," `ev
 "whose page does this appear on." A co-hosted show plausibly writes both, and that is fine — they
 are different facts about the same event, not two encodings of one.
 
-Adding `groupId` and the join table are plain `ALTER TABLE ADD COLUMN` / `CREATE TABLE` operations, and extending the `source` enum emits **zero SQL** — it is a TypeScript-only constraint in Drizzle's SQLite dialect. Generalizing instead to `ownerType`/`ownerId` was rejected: it would force a rebuild of `event`, which has more children than any other table (`ticket`, `event_rsvp`, `recurring_series`, `reservation`) and is the riskiest rebuild in the schema.
+Adding `groupId` and the join table are plain `ALTER TABLE ADD COLUMN` / `CREATE TABLE` operations, and extending the `source` enum emits **zero SQL** — it is a TypeScript-only constraint in Drizzle's SQLite dialect. Keep `groupId` a real column rather than an `ownerType`/`ownerId` pair: the polymorphic form forces a rebuild of `event`, which has more children than any other table (`ticket`, `event_rsvp`, `recurring_series`, `reservation`) and is the riskiest rebuild in the schema.
 
 ### Room time
 
@@ -671,7 +649,7 @@ requireGroupRole(
 
 **The ref is an explicit argument, never read from `params`.** Today's `requireBandBySlug()` reads `getRequestEvent().params.slug`, and the band guards that wrap it are called from roughly 90 sites across more than twenty files. SvelteKit's own documentation is explicit that `params` in a remote function describe the _calling page_, are client-manipulable, and must never determine authorization. It is safe today only incidentally — the slug is a lookup key and the role check still runs against the resolved band — but it cannot serve two route roots without sniffing `route.id`, which is the same untrusted value.
 
-The drift is already visible, and it migrates rather than settling. `createBandEventForm` used to declare `slug` in its Zod schema and then ignore it; that has been cleaned up, and the same shape reappeared two functions away. `getBandEventDetail` takes `z.object({ slug, eventId })`, destructures only `{ eventId }`, and calls `requireBandMemberOrStaff()` — which reads `params.slug`. Its neighbour `getBandLineupInvites` is declared `query(z.string(), async () => …)`: an argument accepted and never bound at all. In both, the declared parameter is decorative and there are two sources of truth for one value. That it keeps recurring in new code is the argument for the explicit ref, not against it.
+The drift is already visible. `getBandEventDetail` takes `z.object({ slug, eventId })`, destructures only `{ eventId }`, and calls `requireBandMemberOrStaff()` — which reads `params.slug`. Its neighbour `getBandLineupInvites` is declared `query(z.string(), async () => …)`: an argument accepted and never bound at all. In both, the declared parameter is decorative and there are two sources of truth for one value.
 
 Passing the ref explicitly is not a security regression. The slug is a lookup key, not a capability: the guard resolves the group from the untrusted slug and then checks the caller's own membership on the resolved group, so spoofing a slug lands you somewhere you have no role and yields 403.
 
@@ -741,7 +719,7 @@ At signup, `resolvePendingInvites(userId, email)` converts pending invites into 
 3. A listener fans out to members — see [Notifications](#notifications).
 4. Members see it on the group dashboard and, unless muted, in-app and by email.
 
-Announcements are one-way. Replies, threads, and read receipts are [deferred](#deferred).
+Announcements are one-way. Replies, threads, and read receipts are [not in scope](#not-in-scope).
 
 ### Uploading a document
 
@@ -799,8 +777,6 @@ A dissolved committee is a historical fact, and its minutes, roster, and announc
 3. The `directory_entry` survives with `groupId` set back to null and visibility forced to hidden — a deleted band reverts to a staff-kept record rather than vanishing, so its event history keeps a name and its lineup credits keep resolving. Nothing is copied to make that work; only `groupId` changes. A `band_site` row, if one exists, cascades away with the group.
 
 A band owner deleting their own band from Settings keeps today's behavior: it is their project and their call, and the confirmation carries the same document count.
-
-The alternative designs were rejected as more machinery than the problem needs: reassigning orphaned files to an archive group needs a synthetic group and an `archivedFrom` column; blocking deletion until documents are cleared just makes staff delete them manually first, which is the outcome deactivation avoids entirely.
 
 ---
 
@@ -895,7 +871,7 @@ description 'Posts from bands, clubs, and committees you belong to'
 defaults    { email: true, inApp: true, sms: false }
 ```
 
-Per-kind keys (`band_announcement`, `club_announcement`, …) were rejected: they would put four near-identical rows in the preferences UI for one user decision, create a `notification_preference` row per user per kind, and make adding a kind a registry change plus a UI change. The kind goes in the notification `data` payload and the copy.
+One key rather than one per kind: four near-identical rows in the preferences UI would be one user decision, and adding a kind would become a registry change plus a UI change. The kind goes in the notification `data` payload and the copy.
 
 Per-group muting is `group_member.notifyAnnouncements`, which the global preference cannot express.
 
@@ -985,7 +961,7 @@ application/vnd.openxmlformats-officedocument.spreadsheetml.sheet         (.xlsx
 
 Legacy macro formats (`application/msword`, `application/vnd.ms-excel`), `application/zip`, and `application/octet-stream` are excluded.
 
-`uploadFile()` enforces its 10 MB cap regardless of the `allowedTypes` argument it is given, and 10 MB is small for a real document. The private module carries its own `MAX_DOCUMENT_BYTES` of 25 MB rather than raising the shared constant. That is a hard ceiling: the file passes through `request.formData()` into an `ArrayBuffer` in the Worker, so memory is the real limit. Anything larger needs presigned multipart upload, which is [deferred](#deferred).
+`uploadFile()` enforces its 10 MB cap regardless of the `allowedTypes` argument it is given, and 10 MB is small for a real document. The private module carries its own `MAX_DOCUMENT_BYTES` of 25 MB rather than raising the shared constant. That is a hard ceiling: the file passes through `request.formData()` into an `ArrayBuffer` in the Worker, so memory is the real limit. Anything larger needs presigned multipart upload, which is [not in scope](#not-in-scope).
 
 Quota is `sum(sizeBytes)` for the group where `deletedAt IS NULL`, checked before upload — 250 MB and 50 files per group, as service constants rather than per-group columns until someone asks for tiering.
 
@@ -1111,88 +1087,38 @@ Phase 2 carries a specific hazard: `band-service.ts` contains **three raw-SQL `b
 
 ## Prerequisites and known defects
 
-Verified against the code, and load-bearing for this design whether or not they are fixed in the
-same pass. Findings are anchored to **symbols rather than line numbers** — an earlier revision of
-this table cited nine line numbers and every one of them had moved by the time anyone read it.
+Verified against the code, and load-bearing for this design whether or not they are fixed in the same
+pass. Findings are anchored to symbols rather than line numbers, which move.
 
-Two findings from that revision are now **fixed** and have been removed: `invite()` catching
-`err.message.includes('unique')` (it uses `isUniqueConstraintError` now, so `BandMemberExistsError`
-fires correctly), and the `includeBandEvents` boolean whose filter vanished when true. A third — that
-group events could not reach the public gig guide — was never true at all; see
-[Reaching the gig guide](#reaching-the-gig-guide).
-
-| Finding                                                                                                                                                                | Location                                                                  | Effect                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
-| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `processEventSeries()` hard-codes `source: 'cmc'` and `status: 'draft'`, copying neither owner nor `location`, and creates no reservation unless the prototype had one | `generation-job.ts` — `processEventSeries`                                | A club's recurring jazz night would never reach the gig guide **and** would not hold the room. Latent today only because band events cannot be recurring at all.                                                                                                                                                                                                                                                                                                                                     |
-| `createBandEvent()` creates no reservation at all — it is an off-site gig listing                                                                                      | `event-service.ts` — `createBandEvent`                                    | There is no non-staff path that reserves the room, so `createGroupEvent()` must add one, modelled on `create()` in the same file, including the `hasConflict` pre-check and the compensating delete if the event insert fails.                                                                                                                                                                                                                                                                       |
-| `invitedById` declared `.notNull()` **and** `onDelete: 'set null'`                                                                                                     | `platform-invite.ts` — `platformInvite`                                   | Deleting a user who ever sent an invite fails on a NOT NULL violation. Fixed by the new table.                                                                                                                                                                                                                                                                                                                                                                                                       |
-| A declared parameter that the handler never binds, then authorization off `params.slug`                                                                                | `band-events.remote.ts` — `getBandEventDetail`, `getBandLineupInvites`    | Two sources of truth for one value. The original instance in `createBandEventForm` was fixed and the shape recurred; resolved for good by the explicit-ref refactor.                                                                                                                                                                                                                                                                                                                                 |
-| Three raw-SQL `band_member` subqueries                                                                                                                                 | `band-service.ts` — inside `listForUser`, `listAll`, `getByIdWithDetails` | Invisible to `pnpm check`; throw at runtime after the table is dropped. Needs a CI grep gate on the literal string as part of phase 2.                                                                                                                                                                                                                                                                                                                                                               |
-| Three `innerJoin(user, eq(user.id, band.ownerId))` — twice in `listAll`, once in `getByIdWithDetails`                                                                  | `band-service.ts`                                                         | An ownerless group is legal under this spec, and an inner join drops any row whose owner is missing. In `listAll` that hides precisely the groups staff need to act on; in `getByIdWithDetails` it empties the detail page of a group that still exists. All three must become left joins during the port. See [Ownership](#ownership).                                                                                                                                                              |
-| `flagEntityTypes` contains `'member_profile'` and `'band_profile'`                                                                                                     | `flag.ts`                                                                 | The feared name collision is gone — nothing is called `band_profile` any more — and the split turns two entity types into one lookup: both now resolve to a `directory_entry` id, since that is where the flagged content (bio, photo, links) actually lives for a member and a band alike. The enum values keep their names and meanings; only what `content_flag.entityId` points at is restated. Worth a comment on the enum rather than a rename, which would need a data migration for no gain. |
+| Finding                                                                                                                                                                | Location                                                                  | Effect                                                                                                                                                                                                                                                                                                                                                   |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `processEventSeries()` hard-codes `source: 'cmc'` and `status: 'draft'`, copying neither owner nor `location`, and creates no reservation unless the prototype had one | `generation-job.ts` — `processEventSeries`                                | A club's recurring jazz night would never reach the gig guide **and** would not hold the room. Latent today only because band events cannot be recurring at all.                                                                                                                                                                                         |
+| `createBandEvent()` creates no reservation at all — it is an off-site gig listing                                                                                      | `event-service.ts` — `createBandEvent`                                    | There is no non-staff path that reserves the room, so `createGroupEvent()` must add one, modelled on `create()` in the same file, including the `hasConflict` pre-check and the compensating delete if the event insert fails.                                                                                                                           |
+| `invitedById` declared `.notNull()` **and** `onDelete: 'set null'`                                                                                                     | `platform-invite.ts` — `platformInvite`                                   | Deleting a user who ever sent an invite fails on a NOT NULL violation. Fixed by the new table.                                                                                                                                                                                                                                                           |
+| A declared parameter that the handler never binds, then authorization off `params.slug`                                                                                | `band-events.remote.ts` — `getBandEventDetail`, `getBandLineupInvites`    | Two sources of truth for one value. The original instance in `createBandEventForm` was fixed and the shape recurred; resolved for good by the explicit-ref refactor.                                                                                                                                                                                     |
+| Three raw-SQL `band_member` subqueries                                                                                                                                 | `band-service.ts` — inside `listForUser`, `listAll`, `getByIdWithDetails` | Invisible to `pnpm check`; throw at runtime after the table is dropped. Needs a CI grep gate on the literal string as part of phase 2.                                                                                                                                                                                                                   |
+| Three `innerJoin(user, eq(user.id, band.ownerId))` — twice in `listAll`, once in `getByIdWithDetails`                                                                  | `band-service.ts`                                                         | An ownerless group is legal under this spec, and an inner join drops any row whose owner is missing. In `listAll` that hides precisely the groups staff need to act on; in `getByIdWithDetails` it empties the detail page of a group that still exists. All three must become left joins during the port. See [Ownership](#ownership).                  |
+| `flagEntityTypes` contains `'member_profile'` and `'band_profile'`                                                                                                     | `flag.ts`                                                                 | Both entity types resolve to a `directory_entry` id, since that is where the flagged content (bio, photo, links) lives for a member and a band alike. The enum values keep their names and meanings; only what `content_flag.entityId` points at changes. Add a comment on the enum rather than renaming, which would need a data migration for no gain. |
 
 **A decision this spec must make, not defer:** whether `processEventSeries()` copies `status` from the prototype. Doing so is required for a club series to publish automatically, but it changes behavior for existing staff CMC series, which today always generate drafts for review. Publish automatically only when `source !== 'cmc'`, preserving the staff review step where it already exists.
 
 ---
 
-## Deferred
+## Not in scope
 
-- **Classes.** A class looks like a group — a teacher, some students, a roster — but the resemblance stops at the roster. Enrollment is not membership: it has a **term** with a start and an end, so the same person is enrolled in Spring and not in Summer while the class itself persists; it has **attendance** per session; and it has **completion**, which is a per-person outcome a membership row has nowhere to put. Modeling that as `group_member` would mean either a new group per term (losing the class's identity and history) or status values that quietly mean different things depending on kind.
+Flat list, so nobody has to guess whether an omission was deliberate.
 
-  The shape when it lands: **`class` is its own kind**, added to the union alongside `club` — not a flavour of club and not a rename of one. A `class` module then hangs off it holding `term` and `enrollment`, the same relationship `band_site` has to `group`, while roster, announcements, and documents are reused wholesale. Nothing in this spec forecloses that; adding the kind is one line plus a row in the governance table above. This is also where the reserved `'lesson'` value already sitting in `reservation.bookerType` would finally get used.
-
-  This is why `club` keeps its concrete name rather than a broader one like `program`. A single umbrella kind would have to be subdivided the moment classes arrive, and subdividing an enum after rows exist is a data migration; separate kinds from the start cost nothing.
-
-- **Threaded discussion** — replies to announcements, read receipts, unread counts. `sse.ts` is a per-isolate in-memory registry, adequate for a bell badge but not a real-time transport; group chat would want a Durable Object.
-- **Group email aliases** — an inbound address per group fanning out to members. The inbound plumbing exists (Postmark `MailboxHash`, signed reply addresses) but a real mailing list is deliverability work, and the inbox schema is contact-keyed rather than member-keyed.
-- **Document folders, versioning, and previews** — flat list, one version, download only.
-- **Presigned multipart upload** — needed above the 25 MB in-Worker ceiling.
-- **Group rehearsal bookings** — a group holding the room privately, outside an event, against a credit balance. This is the band-rehearsal shape and would need a `bookerType` value and credit accounting. Programs do not need it: their sessions are events, and events reserve the room free — see [Room time](#room-time). An earlier draft listed this as a blocking gap for the Real Book Club, which was wrong; the jam is an event and gets its room that way.
-
-- **Request-to-join.** `joinPolicy` has two values, not three. Approval-gated joining needs a `status: 'requested'` rather than reusing `'pending'` — today `'pending'` means "we invited you, awaiting your answer," and a join request is the exact mirror, "you asked us, awaiting ours." Overloading one value would make every roster query and every notification ambiguous about which direction it was facing. It also needs an approval queue and its own notification type, which is more surface than anyone has asked for.
-- **Self-service contact sheets for member bands.** `/act/{token}` exists because an unclaimed act has no account. A member band edits its profile in its own panel, so it needs nothing here.
-- **Group subdomains** — only band microsites claim one.
-- **Public group directory filtering** beyond kind — no genre or tag search for non-band groups.
-- **Per-group document quota tiers** — service constants for now.
-
-## Decisions that were open
-
-Recorded because each one shaped something above, and because the reasoning is easier to revisit than to reconstruct.
-
-- **A committee needs nothing a club doesn't.** Both are the same shape. Minutes are **uploaded** from whatever word processor the committee already uses, not authored in the app — so they are ordinary documents and there is no minutes editor, no decision log, and no structured agenda. This is the clearest statement of what Documents is: a **file store**, not a document tool. Anything that would need in-app authoring is out of scope by construction.
-- **A program leader may resign without a successor.** The owner seat goes empty and staff reappoint. See [Resigning a leadership](#resigning-a-leadership).
-- **Touring profiles get no page at all — not even an unlisted one.** A hosted page is a **member benefit**: it is what joining CMC buys, alongside the slug, the directory listing, and the microsite. An unclaimed act already has the web presence it chose, so public attribution links **out** to that, or renders as plain text. The one URL they get is `/act/{token}`, a magic-linked form for filling in their own record — a write surface, not a page. See [An unclaimed act has no page anywhere](#an-unclaimed-act-has-no-page-anywhere).
-
-  Two earlier drafts overshot this. The first gave staff a UUID path; the second added a `publicId` and an unlisted `/a/{publicId}` profile so staff could forward an act's record to a promoter. Both were answering "how do we address this record publicly" when the right answer is that we don't. A promoter wants the band's own links, and hosting our copy of a third party's information means owning its accuracy and its exposure for no benefit. [Sqids](https://sqids.org/) were considered for the short id and were doubly wrong — they encode integers, which this schema has none of on a directory entry; the implicit `rowid` alternative is unstable across the D1 table rebuild in phase 3; and their own docs list _sensitive data_ and _user IDs_ under "not good for," since the encoding is reversible against a shuffled alphabet rather than a secret.
-
-- **`event_band` and external acts are complementary.** `event_band` shipped after this spec was drafted and looks like a competing model of "an act with no CMC account." It is not: a lineup row is a credit on one bill, an unowned `directory_entry` is a persistent record of a party. The row points at the record when one exists, and `unlinked` keeps meaning "a name with nothing behind it." A lineup row keyed to an event also cannot hold marketing material, a booking contact, or a promotion path — the three reasons the record exists at all. See [How this meets `event_band`](#how-this-meets-event_band).
-
-- **Addresses split from the microsite.** `band_slug_history` follows the slug to `group_slug_history`; the `customDomain*` columns follow the microsite to `band_site`, whose `groupId` is NOT NULL. The alternative — keeping both on the group — would put a premium-only feature on a table that clubs and committees share, and would mean a club could hold a custom domain with no page to serve from it. The cost is that `band-host-service.ts` resolves a hostname through a join instead of one table; it is KV-cached on the path that matters. See [Addresses](#addresses).
-
-- **`group_member` keeps `alias`.** One nullable column, already shipped for bands, and the "null means use the account name" fallback is kind-agnostic. Dropping it during the phase-2 port would be a silent feature regression traded for nothing; generalizing the comment from "stage name" to "the name this person goes by in this group" is the whole of the work.
-
-- **Split by purpose, not by entity type.** The earlier `group` + `band_profile` design split on what a thing _is_; this one splits on what the data is _for_ — managed org, public listing, premium site, private contact. The entity-type axis forced `band_profile` to stand alone to model a touring act, which forced conditionally-null identity columns that no constraint could enforce. On the purpose axis the same requirement is a nullable foreign key and nothing else.
-
-- **The directory entry absorbs the member profile.** Not speculative generality: `user` and `band` already carry seven identical columns, there are three tag tables for two concepts, and `directory-service.ts` has parallel implementations for members and bands. The table is being extracted from duplication that already exists, and the payoff is that a solo member becomes creditable on a bill without inventing a one-person band.
-
-- **`contact` and `subscriber` stay separate, and are linked.** `subscriber` is the consent ledger for an email address; `contact` is the party record. Merging them would put payment references in a table every marketing query joins; leaving them unlinked would let a future send bypass a suppression someone actually expressed. One nullable `subscriberId` buys the single answer to "may we email this person" without the merge. Creating a contact may create a subscriber; it must never create an `audience_member`.
-
-- **Documents survive the group.** Deactivation, not deletion, is how a program ends; see [Ending a group](#ending-a-group).
-- **Bands stay member self-service.** A band is a member's own project; a club or committee is an institution CMC stands behind. Any member may create a band, exactly as today, and the existing Create Band flow is unchanged. Only clubs and committees are staff-created — which is what makes free room time safe to grant by kind, since the privilege attaches to the thing members cannot mint for themselves.
-- **One slug namespace for every kind, not one per kind.** `group.slug` is `unique(slug)`, not `unique(kind, slug)`. Splitting it would work — the route roots are already disjoint (`/band/{slug}` and `/group/{slug}`), and only bands claim subdomains — and it would let a band and a club both be "Jazz Night" instead of one becoming `jazz-night-2`.
-
-  It was rejected on three counts. **The guard is the decisive one:** `requireGroupRole({ slug })` resolves a group from a slug alone, and it is called at roughly 90 sites; a per-kind namespace makes the ref `{ kind, slug }`, so the security boundary takes two client-supplied values instead of one and every caller has to know the kind before it can resolve anything. **Kind stops being free metadata** — `unique(kind, slug)` means changing a group's kind can collide, so it gains a uniqueness check on update. **And kind has to travel everywhere slug travels**: the panel switcher, search results, an announcement's source, a notification's `href`. That is a lot of plumbing to buy a collision case that is arguably worth preventing anyway, since two groups sharing a name confuses people regardless of what the URLs do.
-
-  The reversibility is also asymmetric. Shared → split is easy later: nothing collides, you relax the index. Split → shared means resolving collisions that already exist and breaking live URLs. Name squatting — a member taking a slug a future program wants — is handled by `RESERVED_SLUGS`, which staff can pre-claim, plus a rename.
-
-## Open questions
-
-None — all decisions have been made.
-
-## What this does not cover
-
-- The CMC production workflow — venues, run of show, settlement. That is [production-workflow-spec.md](production-workflow-spec.md); this spec only redefines the band/group boundary it depends on.
-- Event creation, ticketing, and the public gig guide, beyond the ownership column and the new `source` value.
-- The staff inbox, marketing campaigns, and platform-wide notification preferences.
-- **Authoring documents in the app.** Documents stores files; it does not create or edit them. Minutes, agendas, and charts are made elsewhere and uploaded.
-- Migration mechanics for D1 table rebuilds — see [conventions](../development/conventions.md#table-rebuilds-on-d1).
+- Threaded discussion — replies to announcements, read receipts, unread counts.
+- Group email aliases — an inbound address per group fanning out to members.
+- Document folders, versioning, and previews. Flat list, one version, download only.
+- Presigned multipart upload, needed above the 25 MB in-Worker ceiling.
+- Group rehearsal bookings — a group holding the room privately, outside an event. Programs do not
+  need it: their sessions are events, and events reserve the room free.
+- Request-to-join. `joinPolicy` has two values, not three. Approval-gated joining needs a
+  `status: 'requested'` rather than reusing `'pending'`, which today means "we invited you, awaiting
+  your answer" — a join request is its exact mirror, and overloading one value would make every
+  roster query ambiguous about which direction it faces.
+- Contact sheets for member bands. A member band edits its entry in its own panel.
+- Group subdomains. Only band microsites claim one.
+- Public directory filtering beyond kind and genre.
+- Per-group document quota tiers. Service constants for now.
