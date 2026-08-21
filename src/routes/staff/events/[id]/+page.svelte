@@ -58,21 +58,45 @@
 	const rejectFields = rejectListing.fields;
 
 	let id = $derived(page.params.id!);
-	let data = $derived(await getStaffEventDetail(id));
+
+	/**
+	 * Everything the page needs, in one round trip rather than four.
+	 *
+	 * A declaration below a top-level `await` is blocked on it, and a remote
+	 * query does not start fetching until something reads it — so four
+	 * independent queries written as four awaited declarations go out strictly
+	 * one after another, and the page commits as a single batch, which means
+	 * even the `<h1>` waits for the last of them. `Promise.all` reads all four
+	 * in the same tick, so they overlap.
+	 *
+	 * Not cosmetic. The URL commits before any of this has arrived, so the chain
+	 * is dead time on every visit — and it is what
+	 * `e2e/staff-event-reserve-space.e2e.ts` was intermittently timing out
+	 * against on CI once #235 grew it from three queries to four.
+	 *
+	 * Shifts leave out the cancelled ones: this card answers "is this show
+	 * staffed", and a called-off shift is not staffing. The shift list is where
+	 * you go to see what was called off.
+	 */
+	const loaded = $derived(
+		await Promise.all([
+			getStaffEventDetail(id),
+			getEventRecurringSeries(id),
+			getShifts({ eventId: id }),
+			getVolunteerRoles()
+		])
+	);
+
+	let data = $derived(loaded[0]);
+	const recurringSeries = $derived(loaded[1]);
+	const shifts = $derived(loaded[2]);
+	const volunteerRoles = $derived(loaded[3]);
 
 	const evt = $derived(data.event);
 	const isBandEvent = $derived(evt.source === 'band');
 	const isCommunityEvent = $derived(evt.source === 'community');
 	// CMC only sells shows CMC produces — see the rule in event-service.update().
 	const cmcCanSell = $derived(evt.source === 'cmc');
-	const recurringSeries = $derived(await getEventRecurringSeries(id));
-
-	// ── Volunteer staffing ────────────────────────────────────────────────
-	// Cancelled shifts are left out: this card answers "is this show staffed",
-	// and a called-off shift is not staffing. The shift list is where you go to
-	// see what was called off.
-	const shifts = $derived(await getShifts({ eventId: id }));
-	const volunteerRoles = $derived(await getVolunteerRoles());
 	const liveVolunteerRoles = $derived(volunteerRoles.filter((r) => r.isActive));
 
 	/**
