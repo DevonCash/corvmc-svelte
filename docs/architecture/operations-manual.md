@@ -46,10 +46,13 @@ The load-bearing configuration lives in the Cloudflare dashboard, not the repo:
 - three **build environment variables** used by `drizzle.config.ts` for the remote migrate:
   `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_DATABASE_ID`, and `CLOUDFLARE_D1_TOKEN` (an API
   token scoped Account → D1 → Edit);
-- which branches Cloudflare builds at all. It currently builds non-production branches,
-  which is what puts the merge queue's branch in front of the `main` push. Turning that off
-  would make Cloudflare build `main` instead — the migrate step works either way, but if you
-  change it, check a queued PR's build log still says "applying D1 migrations to remote".
+- which branches Cloudflare builds at all. It currently builds non-production branches, which
+  is what puts the merge queue's branch in front of the `main` push. A plain PR branch build
+  only uploads a version — `wrangler deployments list` shows no deployment for it — while the
+  queue branch's build is promoted to 100% of traffic, which is why the two are treated
+  differently. Turning non-production builds off would make Cloudflare build `main` instead;
+  the migrate step works either way, but if you change it, check that a queued PR's build log
+  still says "applying D1 migrations to remote".
 
 GitHub Actions (`.github/workflows/ci.yml`) run **checks only**, on PRs and pushes to
 `main`: prettier+eslint (`lint` on push, `lint:changed` on PRs), `svelte-check`, the full
