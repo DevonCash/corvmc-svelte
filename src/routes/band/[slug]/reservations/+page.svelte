@@ -32,16 +32,28 @@
 	const band = $derived(layout.band);
 	let activeTab = $state<'upcoming' | 'past'>('upcoming');
 
-	function refresh() {
-		void getBandReservations(page.params.slug!).refresh();
-	}
+	/**
+	 * Nothing here refreshes `getBandReservations` by hand, and that is deliberate.
+	 *
+	 * `Form` submits through `remote.enhance`, and SvelteKit's single-flight
+	 * update already re-fetches every query this page is using once the
+	 * submission lands — `getBandReservations` included. Calling `.refresh()` from
+	 * `onsuccess` on top of that put two concurrent runs on the one cached Query
+	 * instance, and the loser left the derived reading a stale value (Svelte
+	 * reports it as `derived_inert`). The booking was written, the server sent it
+	 * back on both responses, and the list still said "No upcoming sessions" until
+	 * the page was reloaded.
+	 *
+	 * Rare enough to look like a flake and common enough to hit a real member: it
+	 * took a loaded machine to reproduce, where it failed 3 runs in 5.
+	 * `e2e/band-reservations.e2e.ts` is the regression test.
+	 */
 </script>
 
 <PageHeader title="Reservations" subtitle={band.name}>
 	<CreateModal
 		hasSustainingMember={membership.hasSustainingMember}
 		needsPhone={contact.needsPhone}
-		onbooked={refresh}
 	/>
 </PageHeader>
 <PageContent width="2xl">
@@ -88,10 +100,7 @@
 								{#if res.canCancel && (res.status === 'scheduled' || res.status === 'confirmed')}
 									<Form
 										remote={cancel}
-										onsuccess={() => {
-											toast.success('Reservation cancelled');
-											refresh();
-										}}
+										onsuccess={() => toast.success('Reservation cancelled')}
 										onfailure={() => toast.error('Failed to cancel')}
 									>
 										<input {...cancelFields.reservationId.as('hidden', res.id)} />

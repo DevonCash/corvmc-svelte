@@ -26,14 +26,12 @@
 	 */
 	let {
 		hasSustainingMember = false,
-		needsPhone = false,
-		onbooked
+		needsPhone = false
 	}: {
 		/** Unlocks recurring series — at least one active member must be sustaining. */
 		hasSustainingMember?: boolean;
 		/** The person booking has no usable number on file; staff need one to call. */
 		needsPhone?: boolean;
-		onbooked?: () => void;
 	} = $props();
 </script>
 
@@ -52,7 +50,6 @@
 		} else {
 			toast.success('Session booked');
 		}
-		onbooked?.();
 	}}
 >
 	{#snippet icon()}<IconCalendarPlus size={18} />{/snippet}
