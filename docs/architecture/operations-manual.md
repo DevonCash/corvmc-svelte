@@ -14,7 +14,8 @@ See the [architecture overview](overview.md) for how the pieces fit together.
 There is no deploy button in this repo and **no GitHub Action deploys**. Deployment is
 handled by **Cloudflare Workers Builds**, which watches the GitHub repo:
 
-1. You push to `main` (usually by merging a PR).
+1. A PR reaches the front of the merge queue, which puts its commit on a temporary
+   `gh-readonly-queue/main/pr-<n>-<sha>` branch, or you push to `main` directly.
 2. Cloudflare's build system runs the build command configured in the Cloudflare dashboard
    (Workers & Pages → corvmc → Settings → Build):
 
@@ -23,10 +24,19 @@ handled by **Cloudflare Workers Builds**, which watches the GitHub repo:
    ```
 
 3. `pnpm ci:migrate` runs `scripts/ci-migrate.mjs`, which applies any pending D1 migrations
-   **only when the branch is `main`** — it reads `WORKERS_CI_BRANCH` (falling back to
-   `CF_PAGES_BRANCH`) and exits 0 without touching the database on any other branch. If the
-   migration fails, the whole build fails and **nothing is published** — the old Worker
+   **only for a build that publishes to production** — `main` itself, or a
+   `gh-readonly-queue/main/*` merge queue branch. It reads `WORKERS_CI_BRANCH` (falling back
+   to `CF_PAGES_BRANCH`) and exits 0 without touching the database on any other branch. If
+   the migration fails, the whole build fails and **nothing is published** — the old Worker
    keeps serving.
+
+   The queue branch counts as production because Cloudflare builds and publishes it, then
+   does **not** build again when the queue fast-forwards `main` onto that same SHA — the
+   queue build is the only one a queued PR ever gets. #241 landed before this was true and
+   its `band_member.alias` migration was skipped while its code went live, so
+   `/directory/bands/[slug]` 500ed in production until the migration was applied by hand.
+   `scripts/ci-migrate.spec.ts` pins the branch matching.
+
 4. `pnpm build` compiles the MJML email layout (`scripts/compile-email-layouts.ts`) and
    then runs `vite build`; the Worker is published from `.svelte-kit/cloudflare/`.
 
@@ -35,7 +45,14 @@ The load-bearing configuration lives in the Cloudflare dashboard, not the repo:
 - the build command above;
 - three **build environment variables** used by `drizzle.config.ts` for the remote migrate:
   `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_DATABASE_ID`, and `CLOUDFLARE_D1_TOKEN` (an API
-  token scoped Account → D1 → Edit).
+  token scoped Account → D1 → Edit);
+- which branches Cloudflare builds at all. It currently builds non-production branches, which
+  is what puts the merge queue's branch in front of the `main` push. A plain PR branch build
+  only uploads a version — `wrangler deployments list` shows no deployment for it — while the
+  queue branch's build is promoted to 100% of traffic, which is why the two are treated
+  differently. Turning non-production builds off would make Cloudflare build `main` instead;
+  the migrate step works either way, but if you change it, check that a queued PR's build log
+  still says "applying D1 migrations to remote".
 
 GitHub Actions (`.github/workflows/ci.yml`) run **checks only**, on PRs and pushes to
 `main`: prettier+eslint (`lint` on push, `lint:changed` on PRs), `svelte-check`, the full
