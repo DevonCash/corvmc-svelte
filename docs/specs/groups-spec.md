@@ -41,15 +41,15 @@ group.kind  'band' | 'club' | 'committee'
 thing everywhere; announcements, documents, and the roster are one implementation. What kind does
 determine is the line below, which is a governance fact rather than a UI one:
 
-|                                   | `band`                                  | `club`, `committee`                      |
-| --------------------------------- | --------------------------------------- | ---------------------------------------- |
-| Created by                        | Any member, self-service                | **Staff only**, from the staff panel     |
-| Owner                             | The creator                             | **Appointed by staff**                   |
-| Deleted by                        | Its owner                               | Staff only                               |
-| May have a band site              | Yes                                     | No                                       |
-| Default join policy               | `invite_only`                           | Either; `open` is the point of a program |
-| Its events may hold the room free | No                                      | **Yes**                                  |
-| Rehearsal bookings                | `bookerType: 'band'`, credits then cash | n/a — see [Room time](#room-time)        |
+|                                   | `band`                                   | `club`, `committee`                      |
+| --------------------------------- | ---------------------------------------- | ---------------------------------------- |
+| Created by                        | Any member, self-service                 | **Staff only**, from the staff panel     |
+| Owner                             | The creator                              | **Appointed by staff**                   |
+| Deleted by                        | Its owner                                | Staff only                               |
+| May have a band site              | Yes                                      | No                                       |
+| Default join policy               | `invite_only`                            | Either; `open` is the point of a program |
+| Its events may hold the room free | No                                       | **Yes**                                  |
+| Rehearsal bookings                | `bookerType: 'group'`, credits then cash | n/a — see [Room time](#room-time)        |
 
 "Band" is not a table — it is _a group with a directory entry, optionally with a band site_. So
 `kind` carries governance alone: who may create, who may delete, and who gets free room time.
@@ -606,18 +606,32 @@ A program does not book the room the way a band does. It gets the room **through
 
 | Path                              | Reserves the room                                                 | Cost               |
 | --------------------------------- | ----------------------------------------------------------------- | ------------------ |
-| Member or band rehearsal          | `bookerType: 'user' \| 'band'`                                    | Credits, then cash |
+| Member or band rehearsal          | `bookerType: 'user' \| 'group'`                                   | Credits, then cash |
 | Staff CMC event — `create()`      | `bookerType: 'event'`, via `staffCreate`, straight to `confirmed` | **Free**           |
 | Band event — `createBandEvent()`  | **Nothing.** It is an off-site gig listing with a `location`      | n/a                |
 | **Club or committee event — new** | `bookerType: 'event'`, same path as a CMC event                   | **Free**           |
 
 So a group event needs a `createGroupEvent()` that takes optional reservation params and routes them through `staffCreate` with `bookerType: 'event'`, exactly as `create()` does in `event-service.ts` — including the `hasConflict` pre-check and the compensating delete if the event insert fails. Recurring group sessions need the same on each generated occurrence.
 
-**No new `bookerType` value, and no credit accounting.** The reservation belongs to the event, not the group, so nothing in the booker polymorphism changes and no credit ledger is touched. `bookerType: 'group'` would imply a group has a balance to spend, which is precisely what a sanctioned program does not need.
+**A group event does not book as the group, and no credit ledger is touched.** The reservation belongs to the event, so `bookerType` stays `'event'` and `bookerId` points at the event row. Booking as the group would imply the group has a balance to spend, which is precisely what a sanctioned program does not need.
+
+#### `bookerType` is a table discriminator, not a category
+
+`reservation.bookerId` carries **no foreign key** — it cannot, since it points into different tables — so `bookerType` exists to say which table that is, and which ref builder resolves it (`refs.ts` branches on exactly this). Two rules follow.
+
+**The existing `'band'` value is renamed to `'group'`.** After the port its rows point at `group.id`, so leaving it called `'band'` would leave the enum naming one table and addressing another. It is a value migration rather than a column change, so no table is rebuilt:
+
+```sql
+UPDATE reservation SET booker_type = 'group' WHERE booker_type = 'band';
+```
+
+The rename grants nothing. Whether a group may hold private rehearsal time stays a service-level policy — only `kind = 'band'` may create one — and group rehearsal bookings are out of scope regardless. Keeping what the discriminator is _called_ separate from what the policy _allows_ is the point.
+
+**`kind` stays off the polymorphism.** `'band' | 'club' | 'committee'` as booker types would be three discriminator values resolving through one `toGroupRef`, and it would cost real things: `kind` becomes a denormalized copy that has to be rewritten whenever a group's kind changes, "any group booking" degrades to `inArray(bookerType, [...])` that silently misses the next kind added, and every branch on booker type gains two identical arms. A discriminator answers _which table_; `kind` answers _what sort of thing the row is_. Different axes.
 
 This is why free room time is safe: only staff create clubs and committees, so only staff decide who may hold the room this way. The privilege travels with the kind, not with a per-event approval.
 
-Bands are excluded deliberately. A band event is an off-site gig listing and does not reserve anything; a band rehearsal is private paid time under `bookerType: 'band'`. Neither becomes free, and a band cannot reach the free path by creating an "event" for its own rehearsal.
+Bands are excluded deliberately. A band event is an off-site gig listing and does not reserve anything; a band rehearsal is private paid time under `bookerType: 'group'`. Neither becomes free, and a band cannot reach the free path by creating an "event" for its own rehearsal.
 
 ---
 
@@ -1021,7 +1035,7 @@ Phase order. Each phase ships green, with bands working at every step.
 | #   | Phase                                                                                                                                                                                                     |
 | --- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 0   | Reserved slugs. First, and near-irreversible once groups exist                                                                                                                                            |
-| 1   | `group` + `group_member`; create a group per existing band, moving name/slug/avatar/description onto it                                                                                                   |
+| 1   | `group` + `group_member`; create a group per existing band, moving name/slug/avatar/description onto it. Repoint `reservation.bookerId` and rename the `'band'` booker type to `'group'`                  |
 | 2   | Port every `band_member` read and write to `group_member` — **its own PR**                                                                                                                                |
 | 3a  | `directory_entry` + `directory_tag`: create, backfill one entry per band **and** per member, fold in `band_genre`/`user_genre`/`user_instrument`, migrate readers. Columns stay on `user`/`band` until 3c |
 | 3b  | `band_site`: move tier, subscription and the five `customDomain*` columns; re-key `band_page_config` and `band_media`. Carries the `band-host-service.ts` join                                            |
@@ -1061,7 +1075,7 @@ Phase 2 carries a specific hazard: `band-service.ts` contains **three raw-SQL `b
 | Events         | `event.bandId` → `event.groupId`; `source` gains `'group'`; `event_group` for co-billing                                            |
 | Lineups        | `event_band` re-keys to `directoryEntryId`; an unowned entry is `confirmed` by construction, and solo members become creditable     |
 | Group events   | New `createGroupEvent()` that can reserve the room free via `bookerType: 'event'`                                                   |
-| Reservations   | `bookerId` for `bookerType = 'band'` repoints to `group.id`. No new `bookerType` value                                              |
+| Reservations   | `bookerType: 'band'` is renamed `'group'` and its `bookerId` repoints to `group.id`; `kind` stays off the polymorphism              |
 | Enrollment     | `joinPolicy` on `group`; self-join for `open` groups                                                                                |
 | Staff panel    | New `/staff/groups` — the only place a club or committee is created                                                                 |
 | Contact sheets | `directory_entry_link` + `/act/{token}` — a magic-linked write surface and the subject-rights door                                  |
