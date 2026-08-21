@@ -14,7 +14,6 @@
 	import { bandSiteUrl } from '$lib/utils/band-site-url';
 	import ErrorToastBoundary from '$lib/components/shared/ErrorToastBoundary.svelte';
 	import { EntityViewer } from '$lib/components/shared/entity';
-	import Badge from '$lib/components/shared/Badge.svelte';
 	import AppShell from '$lib/components/shared/AppShell.svelte';
 	import Nav from '$lib/components/shared/Nav';
 	import { page } from '$app/state';
@@ -71,12 +70,6 @@
 </script>
 
 <AppShell drawerId="band-drawer" user={layout.user} {panels} activePanel={layout.band.slug}>
-	{#snippet brand()}
-		<div class="flex items-center gap-2 px-6 py-5">
-			<span class="truncate text-xl font-bold">{layout.band.name}</span>
-			<Badge variant="primary">Band</Badge>
-		</div>
-	{/snippet}
 	{#snippet navigation()}
 		{#each navItems as item (item.key)}
 			{@const Icon = icons[item.key]}

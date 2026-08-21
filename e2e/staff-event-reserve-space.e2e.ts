@@ -102,8 +102,10 @@ test.describe('staff event creation — reserve space', () => {
 		await waitForEventPage(page, title);
 
 		// The card only renders off `event.reservationId`, so its presence proves
-		// the reservation was created AND linked.
-		await expect(page.getByText('Space Reservation')).toBeVisible();
+		// the reservation was created AND linked. Matched by role, not text: the
+		// staff sidebar's Space group reads "Space / Reservations / Equipment" as
+		// one node, which a substring match on "Space Reservation" also catches.
+		await expect(page.getByRole('heading', { name: 'Space Reservation' })).toBeVisible();
 		await expect(page.getByRole('link', { name: /View reservation/ })).toBeVisible();
 	});
 
