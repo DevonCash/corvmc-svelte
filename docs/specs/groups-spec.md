@@ -411,7 +411,10 @@ Neither needs a redesign; both need editing.
 #### Where everything re-keys
 
 Every foreign key that points at `band.id` today has to land somewhere, and the purpose split
-decides which. This is the complete list:
+decides which. This is the complete list. Values survive untouched wherever the target is the group,
+because `group.id` is `band.id` — see
+[Identity through the migration](#identity-through-the-migration); only the rows landing on
+`directory_entry` and `band_site` resolve through a lookup.
 
 | Today                      | Becomes                       | Because                             |
 | -------------------------- | ----------------------------- | ----------------------------------- |
@@ -1035,7 +1038,7 @@ Phase order. Each phase ships green, with bands working at every step.
 | #   | Phase                                                                                                                                                                                                     |
 | --- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 0   | Reserved slugs. First, and near-irreversible once groups exist                                                                                                                                            |
-| 1   | `group` + `group_member`; create a group per existing band, moving name/slug/avatar/description onto it. Repoint `reservation.bookerId` and rename the `'band'` booker type to `'group'`                  |
+| 1   | `group` + `group_member`; **`band` keeps its identity and becomes `group`** (see below). Rename the `'band'` booker type to `'group'` — no `bookerId` repoint is needed                                   |
 | 2   | Port every `band_member` read and write to `group_member` — **its own PR**                                                                                                                                |
 | 3a  | `directory_entry` + `directory_tag`: create, backfill one entry per band **and** per member, fold in `band_genre`/`user_genre`/`user_instrument`, migrate readers. Columns stay on `user`/`band` until 3c |
 | 3b  | `band_site`: move tier, subscription and the five `customDomain*` columns; re-key `band_page_config` and `band_media`. Carries the `band-host-service.ts` join                                            |
@@ -1058,6 +1061,44 @@ is irreversible, and by then the readers have been running against the new table
 Phase 10 sits last deliberately. External acts are the only part of this spec that stores third-party
 personal data, and putting it after everything else means the access-path rule, the lint rule, and
 the retention job land in a diff where they are the subject rather than a detail.
+
+### Identity through the migration
+
+**`group.id` is `band.id`.** A band is not copied into a new group; the row keeps its identity and
+becomes the group, and the columns belonging elsewhere move out from under it. Most of the
+migration's difficulty disappears with that one decision:
+
+- Six foreign keys — `band_member`, `band_slug_history`, `platform_invite`, `event.bandId`,
+  `event_band.addedByBandId`, and `reservation.bookerId` — change **name only**. Every stored value
+  stays correct.
+- `reservation.bookerId` needs no repoint at all. Only the enum value changes, per
+  [`bookerType` is a table discriminator, not a category](#bookertype-is-a-table-discriminator-not-a-category).
+- **No id map is carried between phases.** That was the alternative's real cost: minting fresh group
+  ids would mean threading a band→group mapping through phases 1, 2 and 3, where one missed lookup
+  silently reattaches a row to the wrong band.
+
+**One hazard, and it is the destructive kind.** `pnpm db:generate` must be told that `band` → `group`
+is a **rename**, not a dropped table plus a new one. Answer that prompt wrong and the generated
+migration drops every band. Read the emitted SQL before committing it — this is the one step in the
+plan where a bad migration is unrecoverable rather than merely wrong.
+
+**`directory_entry` does not reuse ids.** Its rows get fresh uuids, deliberately. Seeding them from
+`band.id` would make `entry.id == entry.groupId` true for every migrated band and false for every new
+one, so code passing a group id where an entry id belongs would work in production against old data
+and fail only on records created later. That is the worst failure shape available here.
+
+It costs nothing in practice, because the mapping never leaves the migration that creates it. Phase
+3a inserts the entries and re-keys `band_genre` and `event_band` in the same step, resolving through
+`group_id` rather than through anything the application has to remember:
+
+```sql
+UPDATE event_band
+   SET directory_entry_id = (
+     SELECT id FROM directory_entry WHERE directory_entry.group_id = event_band.band_id
+   );
+```
+
+The same holds for `band_page_config` and `band_media` re-keying to `band_site` in 3b.
 
 Phase 2 carries a specific hazard: `band-service.ts` contains **three raw-SQL `band_member` subqueries** (inside `listForUser`, `listAll`, and `getByIdWithDetails`) that `pnpm check` cannot see inside. They compile fine through the port and throw at runtime the moment the table is dropped. Add a CI grep gate on the literal string as part of that PR.
 
