@@ -1122,8 +1122,18 @@ pass. Findings are anchored to symbols rather than line numbers, which move.
 
 Flat list, so nobody has to guess whether an omission was deliberate.
 
-- Threaded discussion — replies to announcements, read receipts, unread counts.
-- Group email aliases — an inbound address per group fanning out to members.
+- **A group as a messaging recipient** — addressing a group in the inbox so a message reaches every
+  member. Wanted, and a follow-up rather than part of this spec. `inbox_participant` already carries
+  multi-party threads with a per-participant read cursor, so the table is not the problem; the design
+  question is whether addressing a group **expands to participant rows at send time** (a snapshot —
+  later joiners never see the thread, leavers stay in it) or **references the group and resolves
+  membership at read time** (live — but the read cursor lives on the participant row, so unread would
+  need rethinking). Note also that a group thread and threaded announcements are nearly the same
+  feature approached from opposite ends: one is two-way to all members, the other is one-way with
+  replies. Decide them together, or the second one built will duplicate the first.
+- Threaded discussion — replies to announcements, read receipts, unread counts. See above.
+- Group email aliases — an inbound address per group fanning out to members. Distinct from the item
+  above: that is internal addressing, this is an external inbound address.
 - Document folders, versioning, and previews. Flat list, one version, download only.
 - Presigned multipart upload, needed above the 25 MB in-Worker ceiling.
 - Group rehearsal bookings — a group holding the room privately, outside an event. Programs do not
