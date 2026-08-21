@@ -622,6 +622,51 @@ Prev/next navigation arrows with keyboard shortcuts (← →). Includes `<svelte
 
 When `nextHref` is absent, shows `endLabel` (if provided) or a disabled button.
 
+## Sidebar and panel navigation
+
+`AppShell` → `Sidebar` → `<ul class="menu">` → the `Nav.*` primitives from
+`$lib/components/shared/Nav/`. Three components: `Nav.Item` (a row), `Nav.Collapsible` (a row with
+children, held open by the URL), `Nav.Group` (a titled section).
+
+**The staff panel's rows are data, in `src/routes/staff/nav-items.ts` — add features there, not in
+the template.** The template holds only a `key → Icon` map and a `badgeKey → count` map, which is
+what makes a renamed field on `getStaffLayout` a type error instead of a badge that quietly stops.
+`src/routes/band/[slug]/nav-items.ts` is the same pattern with role gating; member is still inline
+markup.
+
+```svelte
+<Nav.Group title={section.title} collapsible persistKey={section.key} containsActive={…}>
+	<Nav.Item href={item.href} label={item.label} badge={…} active={activeKey === item.key} />
+</Nav.Group>
+```
+
+**Active state.** `Nav.Item` matches the pathname exactly on its own, which lights no row at all on
+a detail page. Pass `active` to override it; staff derives it with `activeNavKey()`, which picks the
+item with the longest matching href. Match on `path === href || path.startsWith(href + '/')` — bare
+`startsWith` lets `/staff/users` claim `/staff/usersomething`.
+
+**Collapsible groups.** `collapsible` turns the title into a disclosure `<button>`; `persistKey`
+remembers the choice, namespaced by `persistScope` (default `staff`). Groups always render open on
+the server and on the first client paint — the stored state is read in `onMount` — because a
+collapsed group is `display: none`, and e2e selects staff nav links by role. Storage holds the
+_collapsed_ set, so a group added later defaults open with no migration. Navigating into a collapsed
+group opens it and keeps it open.
+
+Group titles are buttons, not headings, deliberately: `getByRole('heading', …)` is how pages assert
+their own titles, and a sidebar full of headings collides with that.
+
+**daisyUI facts this depends on**, each of which will otherwise be rediscovered the hard way:
+
+- `.menu` is `flex-flow: column wrap`. Constrain its height without `flex-nowrap` and the rows wrap
+  into a second column past the sidebar's edge, clipped and unreachable rather than scrolling.
+- A flex child needs `min-h-0` to scroll at all; `overflow-y-auto` alone does nothing, because
+  `min-height: auto` keeps the item at content size.
+- `.menu :where(li ul)` indents and draws a guide rule, so a collapsible group cancels it with
+  `ms-0 ps-0 before:content-none`. `NavGroup`'s plain branch renders a bare `<ul>` sibling with no
+  `<li>` wrapper for exactly this reason — do not "fix" it.
+- `.menu-title` on a `<button>` gets the header look for free, and `.menu-dropdown-toggle` supplies
+  the chevron; neither gets daisyUI's hover treatment, so `NavGroup` adds its own.
+
 ## Card
 
 The panel surface. `Card` + `CardBody` + `CardTitle`, from

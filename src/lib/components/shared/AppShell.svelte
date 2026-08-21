@@ -10,7 +10,6 @@
 	import Button from './Button.svelte';
 	import Select from './Form/Select.svelte';
 
-	// eslint-disable-next-line svelte/no-unused-props -- `brand` is accepted for caller API compatibility; the sidebar renders its own brand
 	let {
 		drawerId,
 		user,
@@ -23,8 +22,6 @@
 		user: { name: string; email: string };
 		panels: PanelTab[];
 		activePanel: string;
-		/** Accepted for caller compatibility; the sidebar renders its own brand. */
-		brand?: Snippet;
 		navigation: Snippet;
 		children: Snippet;
 	} = $props();
