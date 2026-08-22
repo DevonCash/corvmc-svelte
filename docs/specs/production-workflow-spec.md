@@ -239,7 +239,7 @@ The objection the second draft raised against a separate table — "a painful me
 the act joins" — does not apply, because nothing merges. Claiming creates a group, moves
 name/description/avatar onto it, and links the existing profile; every production the act
 ever played is already attached to that profile and stays attached. See
-[Claiming a touring act](groups-spec.md#claiming-a-touring-act).
+[Claiming an external act](groups-spec.md#claiming-an-external-act).
 
 **`band.ownerId` is still dropped**, for the reasons below; ownership is now a
 `group_member` row with `role: 'owner'`, enforced by a partial unique index on
@@ -351,7 +351,7 @@ What matters for this migration specifically:
 `group_invite` to the act's contact email with `role: 'owner'` — the role column is already
 typed as the full role tuple (`['owner', 'admin', 'member']`), so no schema change. Claiming
 is the two-part operation described in
-[groups-spec.md](groups-spec.md#claiming-a-touring-act): a `group` is created for the
+[groups-spec.md](groups-spec.md#claiming-an-external-act): a `group` is created for the
 profile, and the invitee's `group_member` row is inserted with the invited role when they
 sign up. There is no `claimStatus` to flip and no `ownerId` to backfill.
 
@@ -948,7 +948,7 @@ slug to emit. It still applies to **hidden member bands**, which do have slugs; 
 pre-existing hole in the audit below.
 
 **The published run of show links out, never in.** Per
-[groups-spec.md](groups-spec.md#an-unclaimed-act-has-no-page-anywhere), an unclaimed act has
+[groups-spec.md](groups-spec.md#an-external-act-has-no-page-anywhere), an external act has
 no hosted page at all — not even an unlisted one — so a slot renders as:
 
 - a link to `/directory/bands/[slug]` when the act is a member band and publicly visible;
