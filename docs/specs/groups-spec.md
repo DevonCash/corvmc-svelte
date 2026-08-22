@@ -4,7 +4,7 @@ A group is a set of CMC members who organize together — a band, a club, or a c
 
 The driving case is the Real Book Club jazz jam: a CMC program with a roster, a recurring session anyone may drop into, a way to tell its members when a session moves, and somewhere to keep the charts. Everything in this spec should be checked against whether it serves that.
 
-This spec splits today's `band` table by purpose. `group` is the managed organization; `directory_entry` is the public listing, shared with members; `band_site` is the premium microsite; `contact` holds the private details of people who are not members. The split is what lets clubs and committees reuse the roster machinery without inheriting band-shaped columns, what lets a touring act exist as a staff-kept record with no roster at all, and what keeps a promoter's phone number out of every table a public query touches.
+This spec splits today's `band` table by purpose. `group` is the managed organization; `directory_entry` is the public listing, shared with members; `band_site` is the premium microsite; `contact` holds the private details of people who are not members. The split is what lets clubs and committees reuse the roster machinery without inheriting band-shaped columns, what lets an external act exist as a staff-kept record with no roster at all, and what keeps a promoter's phone number out of every table a public query touches.
 
 > This spec is the source of truth for the band/group boundary, including where it meets
 > [production-workflow-spec.md](production-workflow-spec.md) and
@@ -18,7 +18,7 @@ This spec splits today's `band` table by purpose. `group` is the managed organiz
 ### The split
 
 Four tables, split by **purpose** rather than by entity type. That axis is what lets a member, a
-band, and a touring act share one listing shape while keeping premium features and private contact
+band, and an external act share one listing shape while keeping premium features and private contact
 details out of it.
 
 | Entity            | Is                                                                     | Attaches to                 |
@@ -169,14 +169,14 @@ external acts, which are the one thing that must never be addressable.
 The reason to put entries on users, rather than only on groups, is that a solo performer currently
 has no honest representation: they either invent a one-person "band" or accept a member profile that
 cannot appear on a bill. With an entry on the user, `event_band` credits a `directoryEntryId` and a
-lineup can mix bands, solo members, and touring acts uniformly — no fake band, and no new slug.
+lineup can mix bands, solo members, and external acts uniformly — no fake band, and no new slug.
 
 Their public page stays `/directory/members/{id}`. This spec adds no performer route for members;
 it only makes them creditable.
 
 ### The external act
 
-A touring act is a `directory_entry` with **both** `userId` and `groupId` null. Three needs justify
+An external act is a `directory_entry` with **both** `userId` and `groupId` null. Three needs justify
 keeping a record at all, and they are worth stating because they are what rule out doing this with
 lineup rows:
 
@@ -192,9 +192,9 @@ creates a `group`, sets `directory_entry.groupId`, and inserts the owner `group_
 `db.batch`. Nothing merges, no identity columns move, and every event they ever played is still
 attached because `event_band` pointed at the entry all along, never at the group.
 
-#### An unclaimed act has no page anywhere
+#### An external act has no page anywhere
 
-**A touring act is a staff-facing record and nothing else.** Its entry is forced to
+**An external act is a staff-facing record and nothing else.** Its entry is forced to
 `visibility: 'hidden'` and there is no public profile, no share link, no short id, no `noindex`
 page — nothing rendered to the world at any URL. It is a row staff can see, and that is the whole of
 it.
@@ -204,7 +204,7 @@ CMC does not host a page for a band that has no relationship with CMC; the band 
 presence it chose — a Linktree, a Bandcamp, an Instagram — and that is where anyone who wants to
 find them should land.
 
-So **public attribution links out, never in.** Wherever an unclaimed act's name appears publicly — a
+So **public attribution links out, never in.** Wherever an external act's name appears publicly — a
 lineup, a run of show, an event page — it renders as:
 
 - a link to the act's own URL, taken from `directory_entry.links`, when they have given one; or
@@ -267,7 +267,7 @@ a name; after the split the first stays on `user` and the second lives here, whe
 
 ### Contact
 
-The private half. `directory_entry` is a **public** listing; a touring act's booking details are the
+The private half. `directory_entry` is a **public** listing; an external act's booking details are the
 opposite of public, and the two must not share a row.
 
 ```
@@ -531,6 +531,18 @@ The row id goes in the R2 key, not the filename — two uploads named `rider.pdf
 ### GroupInvite
 
 Replaces `platform_invite`. Covers only the **email** path: inviting someone who has no account yet.
+
+**`platform_invite` is band-scoped despite its name**, so this is a correction rather than a change
+in meaning. Its `bandId` is NOT NULL, its `role` is `bandRoles`, and its service is
+`createInvite` / `listForBand` / `revoke(inviteId, bandId?)` — every row is an invitation to one
+band. It is also not a gate on joining CMC: signup is open, and `resolvePendingInvites(userId, email)`
+runs from `hooks.server.ts` on a session's first request, matching on email alone, so an invitee who
+ignores the link and signs up unaided still lands in the band.
+
+A genuine platform-level invitation — one that other invitations hang off — is a coherent thing to
+want, and it is additive whenever a second payload type appears (a volunteer role, a class
+enrolment, referral attribution). It buys nothing today: `group_invite` would be its only child, and
+the parent would authorize nothing while signup stays open.
 
 ```
 group_invite
@@ -835,12 +847,12 @@ There is no danger zone here. Ending a club or committee is a staff action, so `
 
 ### Public
 
-| Route                     | Page                                                                                                                             |
-| ------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| `/groups`                 | Directory of public groups, filterable by kind                                                                                   |
-| `/groups/{slug}`          | Simple public page — name, description, photo, upcoming sessions, and a Join button when `joinPolicy` is `open`                  |
-| `/directory/bands/{slug}` | Band listing — unchanged, now resolving group → directory entry                                                                  |
-| `/act/{token}`            | Token-gated contact sheet for an unclaimed act to fill in its own details. A **write** surface — no readable profile page exists |
+| Route                     | Page                                                                                                                            |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `/groups`                 | Directory of public groups, filterable by kind                                                                                  |
+| `/groups/{slug}`          | Simple public page — name, description, photo, upcoming sessions, and a Join button when `joinPolicy` is `open`                 |
+| `/directory/bands/{slug}` | Band listing — unchanged, now resolving group → directory entry                                                                 |
+| `/act/{token}`            | Token-gated contact sheet for an external act to fill in its own details. A **write** surface — no readable profile page exists |
 
 The Join button is the only write on a public page. It requires a session, so a signed-out visitor gets a sign-in prompt that returns them to the group.
 
@@ -856,9 +868,9 @@ Reserve `class` and `classes` now even though classes are deferred. Reserving a 
 | -------------------- | ------------------------------------------------------------------------------ |
 | `/staff/groups`      | All clubs and committees; **create** a group and appoint its leader            |
 | `/staff/groups/{id}` | Edit, set `joinPolicy` and visibility, reassign the leader, deactivate, delete |
-| `/staff/bands`       | Existing page — gains a filter for unlinked touring profiles                   |
+| `/staff/bands`       | Existing page — gains a filter for external acts                               |
 
-`/staff/groups` is the **only** place a club or committee comes into existence. Touring profiles have no panel, no slug, and no page of their own; they are reached from the staff bands area, which gains an inline create used when booking an act into a production and a "send contact sheet link" action.
+`/staff/groups` is the **only** place a club or committee comes into existence. External acts have no panel, no slug, and no page of their own; they are reached from the staff bands area, which gains an inline create used when booking an act into a production and a "send contact sheet link" action.
 
 Add `act` and `acts` to `RESERVED_SLUGS` alongside the group words, so no group can claim the contact-sheet root as a subdomain.
 
@@ -1120,7 +1132,7 @@ Phase 2 carries a specific hazard: `band-service.ts` contains **three raw-SQL `b
 | Enrollment     | `joinPolicy` on `group`; self-join for `open` groups                                                                                |
 | Staff panel    | New `/staff/groups` — the only place a club or committee is created                                                                 |
 | Contact sheets | `directory_entry_link` + `/act/{token}` — a magic-linked write surface and the subject-rights door                                  |
-| Attribution    | Public mentions of an unclaimed act link **out** to the act's own URL, or render as plain text                                      |
+| Attribution    | Public mentions of an external act link **out** to the act's own URL, or render as plain text                                       |
 | Storage        | Second R2 bucket for private documents                                                                                              |
 | Email          | `sendTemplateBatch()` added to the Postmark client                                                                                  |
 | Notifications  | One `announcement` type; per-group mute on the membership row                                                                       |

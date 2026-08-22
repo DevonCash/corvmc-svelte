@@ -948,7 +948,7 @@ slug to emit. It still applies to **hidden member bands**, which do have slugs; 
 pre-existing hole in the audit below.
 
 **The published run of show links out, never in.** Per
-[groups-spec.md](groups-spec.md#an-unclaimed-act-has-no-page-anywhere), an unclaimed act has
+[groups-spec.md](groups-spec.md#an-external-act-has-no-page-anywhere), an external act has
 no hosted page at all — not even an unlisted one — so a slot renders as:
 
 - a link to `/directory/bands/[slug]` when the act is a member band and publicly visible;
