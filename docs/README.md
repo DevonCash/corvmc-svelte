@@ -36,7 +36,7 @@ as reality — reconcile deliberately.
 | [recurring-reservations-spec.md](specs/recurring-reservations-spec.md) | ✅     | RRULE series, prototype cloning, advance windows                                                                            |
 | [staff-reservations-spec.md](specs/staff-reservations-spec.md)         | ✅     | Staff reservation backend, resolve modal, overrides                                                                         |
 | [bands-spec.md](specs/bands-spec.md)                                   | ✅     | Band entity, membership, ownership, invitations — superseded in part by `groups-spec.md`                                    |
-| [groups-spec.md](specs/groups-spec.md)                                 | 📋     | Bands/clubs/committees: the `group` + `band_profile` split, announcements, documents (classes deferred)                     |
+| [groups-spec.md](specs/groups-spec.md)                                 | 📋     | Bands/clubs/committees: `group` + `directory_entry` + `band_site`, roster, announcements, documents                         |
 | [staff-bands-spec.md](specs/staff-bands-spec.md)                       | ✅     | Staff band management & moderation                                                                                          |
 | [tickets-spec.md](specs/tickets-spec.md)                               | ✅     | Ticketed events, Stripe, guest checkout, member discount                                                                    |
 | [directory-profiles-spec.md](specs/directory-profiles-spec.md)         | ✅     | Member/band profiles, instruments, genres, visibility                                                                       |
